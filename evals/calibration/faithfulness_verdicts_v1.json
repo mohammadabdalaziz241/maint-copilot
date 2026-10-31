@@ -1,0 +1,106 @@
+{
+ "source": "evals/results/faithfulness_dev_rerank_k10_v3.json",
+ "seed": 20261031,
+ "items": {
+  "1": {
+   "query_id": 1579,
+   "claim_index": 3,
+   "verifier": "SUPPORTED"
+  },
+  "2": {
+   "query_id": 71,
+   "claim_index": 0,
+   "verifier": "SUPPORTED"
+  },
+  "3": {
+   "query_id": 258,
+   "claim_index": 16,
+   "verifier": "SUPPORTED"
+  },
+  "4": {
+   "query_id": 20,
+   "claim_index": 12,
+   "verifier": "UNSUPPORTED"
+  },
+  "5": {
+   "query_id": 103,
+   "claim_index": 3,
+   "verifier": "SUPPORTED"
+  },
+  "6": {
+   "query_id": 93,
+   "claim_index": 6,
+   "verifier": "UNSUPPORTED"
+  },
+  "7": {
+   "query_id": 138,
+   "claim_index": 3,
+   "verifier": "SUPPORTED"
+  },
+  "8": {
+   "query_id": 71,
+   "claim_index": 6,
+   "verifier": "SUPPORTED"
+  },
+  "9": {
+   "query_id": 129,
+   "claim_index": 6,
+   "verifier": "UNSUPPORTED"
+  },
+  "10": {
+   "query_id": 31,
+   "claim_index": 4,
+   "verifier": "UNSUPPORTED"
+  },
+  "11": {
+   "query_id": 126,
+   "claim_index": 8,
+   "verifier": "SUPPORTED"
+  },
+  "12": {
+   "query_id": 74,
+   "claim_index": 13,
+   "verifier": "SUPPORTED"
+  },
+  "13": {
+   "query_id": 23,
+   "claim_index": 8,
+   "verifier": "SUPPORTED"
+  },
+  "14": {
+   "query_id": 20,
+   "claim_index": 4,
+   "verifier": "SUPPORTED"
+  },
+  "15": {
+   "query_id": 61,
+   "claim_index": 8,
+   "verifier": "SUPPORTED"
+  },
+  "16": {
+   "query_id": 201,
+   "claim_index": 0,
+   "verifier": "UNSUPPORTED"
+  },
+  "17": {
+   "query_id": 26,
+   "claim_index": 2,
+   "verifier": "UNSUPPORTED"
+  },
+  "18": {
+   "query_id": 46,
+   "claim_index": 11,
+   "verifier": "UNSUPPORTED"
+  },
+  "19": {
+   "query_id": 99,
+   "claim_index": 11,
+   "verifier": "UNSUPPORTED"
+  },
+  "20": {
+   "query_id": 190,
+   "claim_index": 4,
+   "verifier": "UNSUPPORTED"
+  }
+ }
+}

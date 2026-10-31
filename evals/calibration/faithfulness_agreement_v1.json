@@ -1,0 +1,39 @@
+{
+ "n_labelled": 20,
+ "agreement": 0.85,
+ "verifier_unsupported_confirmed": "7/9",
+ "verifier_supported_confirmed": "10/11",
+ "disagreements": [
+  {
+   "item": "3",
+   "human": "UNSUPPORTED",
+   "verifier": "SUPPORTED",
+   "note": "Emergency shutdown step is confused with final system-shutdown step; Safe-T-Stop instruction is an emergency procedure."
+  },
+  {
+   "item": "4",
+   "human": "SUPPORTED",
+   "verifier": "UNSUPPORTED",
+   "note": "Precedence is explicit; operational-readiness benefit is a reasonable high-level inference."
+  },
+  {
+   "item": "9",
+   "human": "SUPPORTED",
+   "verifier": "UNSUPPORTED",
+   "note": "Explicit general-purpose-vehicle exception."
+  }
+ ],
+ "unsupported_rate_human_standard": {
+  "verifier_reported": 0.0099,
+  "estimate": 0.0977,
+  "range95": [
+   0.0205,
+   0.3829
+  ],
+  "claims_in_scope": 910,
+  "note": "partially supported claims excluded; range from Wilson bounds on both strata"
+ },
+ "verifier_extraction_errors": [
+  "item 9: the verifier listed its own critique of the answer as a claim"
+ ]
+}

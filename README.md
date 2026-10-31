@@ -108,7 +108,17 @@ checked against the page text in code.
   a rule applied to the wrong procedure, a misread strength value and one contradicted yes/no
   answer; they are listed per query in the results file.
 - The verifier's evidence quotes were found on the named page for 98% of supported or partially
-  supported claims; its labels have not yet been checked against a human.
+  supported claims.
+- **Human spot check of the verifier** ([`faithfulness_agreement_v1.json`](evals/calibration/faithfulness_agreement_v1.json)):
+  20 claims labelled blind (all 9 the verifier called unsupported, 11 it called supported), 85%
+  agreement. The human confirmed 7 of the 9 unsupported claims; one of the other two was the
+  verifier listing its own critique of an answer as a claim (an extraction error). Of the 11
+  "supported" claims the human confirmed 10; the miss was an answer that confused the emergency
+  shutdown step with the final system-shutdown step. **The verifier's absolute rate (1.0% of
+  claims unsupported) is therefore an underestimate:** by the human standard the estimate is about
+  10%, with a 95% range of 2–38% from so small a sample, so no absolute faithfulness figure is
+  claimed here. Comparisons made with the same verifier (v2 vs v3 above) remain valid as relative
+  measures.
 
 Dev cost per 113-question run: about $0.07 for answers and $0.56 for judging, from token counts
 and third-party price lists not yet checked against Anthropic's pricing page
