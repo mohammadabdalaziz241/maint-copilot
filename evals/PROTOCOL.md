@@ -17,5 +17,12 @@ Sealed id list SHA-256: `2a6fb737f93a33dbc17ee72de5b0bc437574feee58348ae3b2f9f20
 4. Reported metrics: nDCG@10 (primary, linear gains), Recall@10, MRR, with 95% bootstrap confidence
    intervals over queries. Differences between systems are tested with a paired bootstrap on the
    same queries.
-5. The judge-based answer metrics (faithfulness, correctness against the reference answer, citation
-   precision) are added in Phase 2 with their own calibration record.
+5. Answer correctness is judged by a different, stronger model than the answerer (answerer
+   `claude-haiku-5-5`, judge `claude-sonnet-5-5`), binary PASS/FAIL against the human-written
+   reference answer, reasoning before verdict.
+6. **Judge calibration (added 31 Oct 2026, before any labels were collected).** 40 dev answers
+   (20 judged PASS, 20 FAIL; seed 20261031) are labelled blind by a human
+   (`evals/calibration/to_label_v1.csv`). Judge pass rates are reported as trustworthy only if the
+   judge agrees with the human on at least 80% of human-PASS items and at least 80% of human-FAIL
+   items. Otherwise the judge prompt is revised on these items and re-checked on a fresh sample.
+7. Citation precision and citation hit rate are scored without a judge, against the qrels.
