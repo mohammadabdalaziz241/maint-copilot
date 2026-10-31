@@ -89,6 +89,27 @@ is therefore kept frozen and read as a **conservative lower bound**. Adjusting f
 strictness (stratified by verdict), the retrieved-top-10 v3 pass rate of 0.522 corresponds to an
 estimated **0.64 by the human standard (range 0.49–0.75)**.
 
+**Faithfulness** ([`faithfulness_dev_rerank_k10_v3.json`](evals/results/faithfulness_dev_rerank_k10_v3.json)).
+`claude-sonnet-5-5` splits each answer into atomic claims and labels every claim against the 10
+pages the answerer saw, naming the supporting page and quoting its evidence; each quote is then
+checked against the page text in code.
+
+| Answers (retrieved top 10) | Answers checked | Claims supported per answer (95% CI) | Answers with no unsupported claim | Fact claims: supported / partial / unsupported | Verifier quote found on page |
+|---|---|---|---|---|---|
+| Prompt v2 | 82 (31 declined) | 0.947 (0.929–0.964) | 0.939 | 668 / 35 / 5 of 708 | 0.989 |
+| Prompt v3 | 112 (1 declined) | 0.933 (0.910–0.954) | 0.920 | 901 / 49 / 9 of 959 | 0.980 |
+
+- **Cutting refusals did not cost faithfulness on the questions both prompts answered**: paired
+  difference −0.003 (95% CI −0.019 to +0.013, 82 queries). The 30 questions v3 answers but v2
+  declined are slightly less grounded (0.902 supported; 2 contain an unsupported claim).
+- **Judge FAILs are mostly incomplete, not invented**: claims are supported at 0.945 in answers the
+  judge passed and 0.919 in answers it failed.
+- The 9 unsupported v3 claims include outside knowledge leaking in (aircraft manufacturers),
+  a rule applied to the wrong procedure, a misread strength value and one contradicted yes/no
+  answer; they are listed per query in the results file.
+- The verifier's evidence quotes were found on the named page for 98% of supported or partially
+  supported claims; its labels have not yet been checked against a human.
+
 Dev cost per 113-question run: about $0.07 for answers and $0.56 for judging, from token counts
 and third-party price lists not yet checked against Anthropic's pricing page
 ([`llm.py`](src/maint_copilot/llm.py)). Answer latency p50 2.0–2.6 s, p95 3.9–4.4 s.
