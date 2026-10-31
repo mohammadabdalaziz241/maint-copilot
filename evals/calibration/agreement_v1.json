@@ -1,0 +1,59 @@
+{
+ "n_labelled": 40,
+ "agreement": 0.875,
+ "cohen_kappa": 0.75,
+ "judge_true_pass_rate": 0.8,
+ "judge_true_fail_rate": 1.0,
+ "human_pass_share": 0.625,
+ "disagreements": [
+  {
+   "item": "5",
+   "query_id": "132",
+   "human": "PASS",
+   "judge": "FAIL"
+  },
+  {
+   "item": "10",
+   "query_id": "91",
+   "human": "PASS",
+   "judge": "FAIL"
+  },
+  {
+   "item": "13",
+   "query_id": "30",
+   "human": "PASS",
+   "judge": "FAIL"
+  },
+  {
+   "item": "24",
+   "query_id": "53",
+   "human": "PASS",
+   "judge": "FAIL"
+  },
+  {
+   "item": "32",
+   "query_id": "75",
+   "human": "PASS",
+   "judge": "FAIL"
+  }
+ ],
+ "true_pass_rate_wilson95": [
+  0.609,
+  0.911
+ ],
+ "true_fail_rate_wilson95": [
+  0.796,
+  1.0
+ ],
+ "meets_protocol_threshold": true,
+ "adjusted_pass_rate": {
+  "run": "evals/results/answers_dev_rerank_k10_v3.json",
+  "judge_pass_rate": 0.5221,
+  "estimate": 0.642,
+  "range95": [
+   0.491,
+   0.746
+  ],
+  "method": "stratified by judge verdict; Wilson bounds on both flip rates"
+ }
+}

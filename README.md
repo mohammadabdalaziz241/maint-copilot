@@ -51,8 +51,8 @@ deferred to a GPU run. The 170-query sealed split has not been scored.
 
 **Grounded answers (113 dev queries).** `claude-haiku-5-5` answers from the top-k pages with page
 citations; structured output restricts citations to the page ids it was given. `claude-sonnet-5-5`
-judges each answer against the human reference answer. **The judge is not yet calibrated against
-human labels** (see protocol), so pass rates are provisional.
+judges each answer against the human reference answer. The judge was checked against 40 blind
+human labels before its numbers were used (below).
 
 | Context | Prompt | Judge pass rate (95% CI) | Declined | Citation precision | Source |
 |---|---|---|---|---|---|
@@ -78,6 +78,16 @@ What the runs showed:
   citations per run) was removed by constraining citations in the output schema.
 - Known failure: for "Should paint be thinned excessively…?" the answerer returned a refusal
   (`stop_reason=refusal`); it is scored as FAIL.
+
+**Judge calibration** ([`agreement_v1.json`](evals/calibration/agreement_v1.json)). On 40 dev
+answers (20 the judge passed, 20 it failed) labelled blind by a human: agreement 87.5%, Cohen's
+κ = 0.75. The judge failed every answer the human failed (15/15) and passed 20 of the 25 the human
+passed (0.80, Wilson 95% CI 0.61–0.91), meeting the pre-registered threshold of 0.8 on both, at the
+boundary. All five disagreements are open-ended "explain/summarise" questions where the judge
+required every detail of a long reference answer and the human accepted the core facts. The judge
+is therefore kept frozen and read as a **conservative lower bound**. Adjusting for its measured
+strictness (stratified by verdict), the retrieved-top-10 v3 pass rate of 0.522 corresponds to an
+estimated **0.64 by the human standard (range 0.49–0.75)**.
 
 Dev cost per 113-question run: about $0.07 for answers and $0.56 for judging, from token counts
 and third-party price lists not yet checked against Anthropic's pricing page

@@ -12,3 +12,11 @@ def test_kappa_perfect_and_chance():
         abs(ja.cohen_kappa(["PASS", "PASS", "FAIL", "FAIL"], ["PASS", "FAIL", "PASS", "FAIL"]))
         < 1e-9
     )
+
+
+def test_wilson_and_adjustment():
+    lo, hi = ja.wilson(5, 20)
+    assert 0.10 < lo < 0.12 and 0.46 < hi < 0.48
+    adj = ja.adjusted_pass_rate(0.5, up=(5, 20), down=(0, 20))
+    assert adj["estimate"] == 0.625
+    assert adj["range95"][0] < 0.625 < adj["range95"][1]
