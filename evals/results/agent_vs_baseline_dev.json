@@ -1,0 +1,51 @@
+{
+ "baseline": "hybrid top 10, prompt v3, claude-haiku-5-5",
+ "agent": "a1.1_claude-haiku-5-5_tc8",
+ "n_queries": 113,
+ "pass_rate": {
+  "baseline": 0.478,
+  "agent_r0": 0.593,
+  "agent_each_repeat": [
+   0.593,
+   0.628,
+   0.655
+  ]
+ },
+ "paired_diff_agent_r0_minus_baseline": {
+  "mean": 0.115,
+  "ci95": [
+   0.0354,
+   0.1947
+  ]
+ },
+ "flips": {
+  "fail_to_pass": 18,
+  "pass_to_fail": 5
+ },
+ "pass_hat_k": {
+  "k": 3,
+  "agent_all_repeats_pass": 0.549
+ },
+ "groups": {
+  "retrieval_missed_in_baseline": {
+   "n": 20,
+   "baseline": 0.1,
+   "agent_r0": 0.2
+  },
+  "summary_questions": {
+   "n": 72,
+   "baseline": 0.403,
+   "agent_r0": 0.472
+  }
+ },
+ "answer_cost_usd_per_question": {
+  "baseline": 0.00141,
+  "agent": 0.00291,
+  "ratio": 2.07
+ },
+ "latency_p50_s": {
+  "baseline": 2.5,
+  "agent": 6.45
+ },
+ "success_rule_met": true
+}

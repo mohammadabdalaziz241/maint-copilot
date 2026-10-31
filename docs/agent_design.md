@@ -49,3 +49,14 @@ non-agentic baseline is re-run under the same condition (hybrid top 10, prompt v
 - Success rule: the agent beats the baseline with a CI excluding zero, at no more than 3x the cost
   per question. Otherwise the README reports that the agent did not help.
 - The sealed split is not used in Phase 3 design work.
+
+## Amendments before the first full run (31 Oct 2026, results not yet seen)
+
+1. `read_page(page_id)` became `read_pages(page_ids)` with at most 5 ids per call, to save turns;
+   the agent sees the same pages either way. Requests for more than 5 are truncated and the agent
+   is told so.
+2. Version a1.1: in a smoke test on 3 dev questions, one final `submit_answer` arrived empty
+   because the output hit the 2,000-token cap. The cap is now 4,000 tokens, and an empty or cut-off
+   submission is returned to the agent as an error instead of being accepted.
+3. The baseline (hybrid top 10, no reranking, prompt v3) was run before the agent:
+   judge pass rate 0.478 (95% CI 0.389–0.575).

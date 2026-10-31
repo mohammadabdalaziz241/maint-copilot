@@ -12,7 +12,7 @@ import re
 from collections.abc import Mapping, Sequence
 from typing import Literal
 
-from pydantic import BaseModel, Field, create_model
+from pydantic import BaseModel, Field, ValidationError, create_model
 
 from maint_copilot.answer import format_context
 from maint_copilot.llm import Usage
@@ -71,19 +71,25 @@ def check_answer(
 ) -> dict:
     ids = [int(p["corpus_id"]) for p in pages]
     text_by_id = {int(p["corpus_id"]): p["markdown"] for p in pages}
-    resp = client.messages.parse(
-        model=model,
-        max_tokens=6000,
-        system=VERIFIER_SYSTEM,
-        output_format=_schema(ids),
-        messages=[
-            {
-                "role": "user",
-                "content": f"{format_context(pages)}\n\n<question>{question}</question>\n"
-                f"<answer>{answer}</answer>",
-            }
-        ],
+    content = (
+        f"{format_context(pages)}\n\n<question>{question}</question>\n<answer>{answer}</answer>"
     )
+    resp, error = None, None
+    for max_tokens in (6000, 12000):
+        try:
+            resp = client.messages.parse(
+                model=model,
+                max_tokens=max_tokens,
+                system=VERIFIER_SYSTEM,
+                output_format=_schema(ids),
+                messages=[{"role": "user", "content": content}],
+            )
+            error = None
+            break
+        except ValidationError as err:  # output cut off: retry once with more room
+            error = f"verifier output invalid: {str(err).splitlines()[0][:120]}"
+    if resp is None:
+        return {"skipped": "verifier failed", "error": error}
     out = resp.parsed_output
     claims = []
     for c in out.claims if out else []:

@@ -89,7 +89,8 @@ def main() -> None:
         "verifier_model": args.verifier,
         "answers_checked": len(done),
         "answers_skipped": {
-            k: sum(1 for c in checks if c.get("skipped") == k) for k in ("declined", "no answer")
+            k: sum(1 for c in checks if c.get("skipped") == k)
+            for k in ("declined", "no answer", "verifier failed")
         },
         "per_answer": {
             "supported_share": mean_ci([c["supported_share"] for c in done]),

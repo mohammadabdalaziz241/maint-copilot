@@ -124,6 +124,47 @@ Dev cost per 113-question run: about $0.07 for answers and $0.56 for judging, fr
 and third-party price lists not yet checked against Anthropic's pricing page
 ([`llm.py`](src/maint_copilot/llm.py)). Answer latency p50 2.0–2.6 s, p95 3.9–4.4 s.
 
+## Phase 3: agent (dev split)
+
+Design and experiment were fixed before any agent code ([`docs/agent_design.md`](docs/agent_design.md)).
+The agent is a plain Anthropic tool-use loop (no framework): `claude-haiku-5-5` with
+`search_pages`, `read_pages`, `read_adjacent` and `submit_answer`, at most 8 tool calls per
+question, and citations restricted in code to pages it has read in full
+([`agent.py`](src/maint_copilot/agent.py)). The baseline retrieves once with the same hybrid
+retriever (no reranker; see the design note on why) and answers from the top 10 pages with the
+same answer rules.
+
+| | Baseline | Agent | Source |
+|---|---|---|---|
+| Judge pass rate (113 dev questions) | 0.478 | **0.593** (repeats: 0.628, 0.655) | [`agent_vs_baseline_dev.json`](evals/results/agent_vs_baseline_dev.json) |
+| Paired difference, first run | | **+0.115** (95% CI +0.035 to +0.195); 18 FAIL→PASS, 5 PASS→FAIL | |
+| Passes in all 3 agent runs (pass^3) | | 0.549 | |
+| Answer cost per question | $0.0014 | $0.0029 (2.1×) | price table unverified |
+| Median latency | 2.5 s | 6.5 s | |
+| Tool calls per question | | 3.9 mean; 1–2 of 113 runs hit the budget | |
+
+**The pre-registered success rule is met on correctness** (CI excludes zero, cost ≤ 3×). What the
+analysis shows about *why*:
+- **Not better retrieval.** The agent's pages contain a relevant page less often than the
+  baseline's 10 (0.72 vs 0.82). In 15 of the 18 questions it turned from FAIL to PASS, the
+  baseline already had a relevant page but denied the pages said it or picked the wrong item. The
+  agent reads 3.7 chosen pages on average and answers from them decisively.
+- **Target groups improved less than hoped**: questions where the baseline retrieved no relevant
+  page 0.10 → 0.20 (n = 20); summary questions 0.40 → 0.47 (n = 72).
+- **Answer length is not the explanation**: agent answers are longer (213 vs 127 words), but in
+  both arms the shortest answers pass most often, and on the 22 questions where both answers have
+  similar length the agent still passes more (0.727 vs 0.591).
+- **Faithfulness is worse, provisionally.** With the same verifier, the agent's answers have
+  0.881 of claims supported per answer (95% CI 0.851–0.909) and 80% of answers with no unsupported
+  claim, against 0.933 and 92% for the reranked pipeline; 34 of 1,306 agent claims were judged
+  unsupported vs 9 of 959. The pre-registered comparison is against the hybrid baseline, whose
+  faithfulness check is incomplete (45 of 113 answers); **the Phase 3 result is provisional until
+  it is finished.**
+
+A human-approval path for work orders is included: the agent can only propose a draft, a named
+person must approve it, decisions are final, and drafts may only cite pages the agent read
+([`work_orders.py`](src/maint_copilot/work_orders.py), tests in `tests/test_work_orders.py`).
+
 ## Data
 
 Corpus: ViDoRe V3 Industrial: 27 USAF Technical Orders (English), 5,244 pages with page images and
@@ -167,6 +208,9 @@ python3 scripts/run_rerank.py --top-n 20   # resumable; writes evals/results/rer
 # answers + judge (needs ANTHROPIC_API_KEY in .env; answers are cached per query)
 python3 scripts/run_answers.py --context rerank --k 10
 python3 scripts/run_answers.py --context oracle --k 10
+python3 scripts/run_answers.py --context hybrid --k 10    # Phase 3 baseline
+python3 scripts/run_agent.py --repeats 3
+python3 scripts/compare_agent.py --agent-version a1.1 --repeats 3
 ```
 
 ## Layout
