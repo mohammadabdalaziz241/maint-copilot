@@ -1,0 +1,51 @@
+# Agent design (Phase 3), fixed 31 Oct 2026 before any agent code was written
+
+## Why an agent, measured
+
+Dev split, retrieved top 10, prompt v3 (`evals/results/answers_dev_rerank_k10_v3.json`):
+
+| Group | Judge pass rate |
+|---|---|
+| Retrieval missed every relevant page (22 of 113) | 0.136 (vs 0.615 when a relevant page was retrieved) |
+| Questions written from document summaries (72) | 0.417 (vs 0.707 for single-image questions) |
+| Evidence includes tables (42) | 0.476 (vs 0.549 without) |
+| Evidence includes figures (33) | 0.424 (needs visual retrieval, out of scope here) |
+| Questions needing arithmetic | about 1 of 113 |
+
+The agent targets the first two: **search again with reworded queries** when results miss, and
+**read further** (adjacent pages) to cover multi-page answers. A calculator or SQL table tool is
+not justified by these numbers and is added only if the agent's own failure analysis calls for it.
+
+## Version 1
+
+- Plain Anthropic Messages API tool-use loop (no agent framework). Agent model `claude-haiku-5-5`.
+- Tools:
+  - `search_pages(query, k<=10)`: shared hybrid retriever (BM25 + dense chunks, RRF); returns page
+    ids, sources and short snippets.
+  - `read_page(page_id)`: full page text.
+  - `read_adjacent(page_id, before<=2, after<=2)`: neighbouring pages of the same manual.
+  - `submit_answer(answer, citations, insufficient_evidence)`: ends the run; citations must be
+    pages the agent has read in full, checked in code.
+- Budgets per question: at most 8 tool calls, 60k input tokens, USD 0.05 (at the recorded price
+  table). On reaching a budget the agent is told to answer from what it has read.
+- Every step is traced: tool, input, pages returned, tokens, latency.
+- `draft_work_order` is a separate demonstration path with human approval enforced in code and a
+  test; it is not part of the benchmark score.
+
+## Constraint
+
+The cross-encoder reranker (1.1 GB weights) cannot be copied into the cloud workspace (400 MB
+per-file limit), so the agent searches with the hybrid retriever **without** reranking. The
+non-agentic baseline is re-run under the same condition (hybrid top 10, prompt v3).
+
+## Experiment (pre-registered)
+
+- Arms: baseline (retrieve once with the hybrid retriever, answer from top 10, prompt v3) vs agent;
+  both `claude-haiku-5-5`, same frozen judge (`claude-sonnet-5-5`), all 113 dev queries.
+- Primary measure: judge pass rate, paired difference with 95% bootstrap CI.
+- Secondary: pass rate on the two target groups; cost, latency and tool calls per question;
+  relative faithfulness with the same verifier; pass^3 (agent run three times; a query counts
+  only if all three runs pass).
+- Success rule: the agent beats the baseline with a CI excluding zero, at no more than 3x the cost
+  per question. Otherwise the README reports that the agent did not help.
+- The sealed split is not used in Phase 3 design work.
