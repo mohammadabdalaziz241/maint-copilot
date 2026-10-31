@@ -5,7 +5,10 @@
  "query_prompt": "Represent this sentence for searching relevant passages: ",
  "chunk_max_tokens": 384,
  "rrf_k": 60,
- "query_embedding_ms_mean": 8.24,
+ "dense_query_ms_mean_cpu": {
+  "dense_page": 7.91,
+  "dense_chunk": 7.97
+ },
  "systems": {
   "bm25": {
    "n": 113,
@@ -124,7 +127,7 @@
     ]
    },
    "mrr": {
-    "mean": 0.5433,
+    "mean": 0.5432,
     "ci95": [
      0.4667,
      0.6194
@@ -155,7 +158,7 @@
     ]
    },
    "mrr": {
-    "mean": 0.6011,
+    "mean": 0.601,
     "ci95": [
      0.5238,
      0.6771

@@ -35,14 +35,19 @@ Table 1) to within 0.001, which checks the evaluation harness.
 | Dense, whole page (truncated at 512 tokens) | 0.320 (0.267–0.374) | 0.634 | −0.143 (−0.194 to −0.095) |
 | Dense, structure-based chunks ≤384 tokens, max-pooled | 0.380 (0.323–0.437) | 0.684 | −0.084 (−0.133 to −0.036) |
 | Hybrid RRF (BM25 + dense pages) | 0.406 (0.348–0.466) | 0.747 | −0.057 (−0.096 to −0.019) |
-| **Hybrid RRF (BM25 + dense chunks)** | **0.460 (0.397–0.524)** | **0.760** | −0.004 (−0.036 to 0.028) |
+| Hybrid RRF (BM25 + dense chunks) | 0.460 (0.397–0.524) | 0.760 | −0.004 (−0.036 to 0.028) |
+| **Hybrid + cross-encoder rerank of top 20** (`bge-reranker-base`, page = max over chunks) | **0.487 (0.424–0.550)** | 0.760 | +0.024 |
 
 Source: [`dense_hybrid_dev.json`](evals/results/dense_hybrid_dev.json). Findings: chunking helps the
 dense retriever by 0.06 nDCG@10; a small dense model alone loses to BM25 on these manuals; the
 chunk-level hybrid matches BM25 on ranking and finds more relevant pages in its top 100, which is
 what a reranker needs. Per-query inspection: BM25 wins on rare exact terms ("Mechanical Beam
 Analytical Balance", "reamer", "HSV"); dense wins on paraphrase ("minimum brake lining thickness").
-The 170-query sealed split has not been scored.
+Reranking the top 20 adds +0.027 nDCG@10 over the hybrid (95% CI −0.006 to +0.060,
+[`rerank_dev_top20.json`](evals/results/rerank_dev_top20.json)): likely but not yet demonstrated on
+113 queries. Depth is a cost decision: on this 4-core CPU the reranker takes ~0.29 s per chunk pair,
+so top 20 costs ~14 s per query and top 50 (recall 0.678 vs 0.566) ~33 s; the deeper setting is
+deferred to a GPU run. The 170-query sealed split has not been scored.
 
 ## Data
 
@@ -82,6 +87,8 @@ hf download BAAI/bge-small-en-v1.5 --local-dir models/bge-small-en-v1.5
 python3 scripts/embed_corpus.py --model models/bge-small-en-v1.5 --variant chunk
 python3 scripts/embed_corpus.py --model models/bge-small-en-v1.5 --variant page
 python3 scripts/run_dense_hybrid.py   # dev split only; writes evals/results/dense_hybrid_dev.json
+hf download BAAI/bge-reranker-base --local-dir models/bge-reranker-base
+python3 scripts/run_rerank.py --top-n 20   # resumable; writes evals/results/rerank_dev_top20.json
 ```
 
 ## Layout
