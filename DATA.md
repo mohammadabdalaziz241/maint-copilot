@@ -15,8 +15,10 @@ This project uses the ViDoRe V3 Industrial dataset (`vidore/vidore_v3_industrial
 ViDoRe V3: *A Comprehensive Evaluation of Retrieval Augmented Generation in Complex Real-World
 Scenarios* (arXiv:2601.08620), licensed under
 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). The dataset is downloaded unmodified into
-`data/` and is not redistributed in this repository. Derived artefacts that are committed (query-id
-splits, per-query scores, extracted table schemas) are changes made by this project, are attributed
-here, and are released under the same CC BY 4.0 terms. The underlying technical orders are U.S. Air
+`data/`; the corpus itself (page images and page text) is not redistributed in this repository.
+Committed files that contain material from the dataset (query text and reference answers inside
+`evals/results/`, short page excerpts inside `evals/calibration/`) and derived artefacts (query-id
+splits, per-query scores, extracted table schemas) are attributed here and released under the same
+CC BY 4.0 terms; changes made by this project are its own outputs (model answers, scores, labels). The underlying technical orders are U.S. Air
 Force publications marked "Distribution Statement A. Approved for public release; distribution is
 unlimited."
