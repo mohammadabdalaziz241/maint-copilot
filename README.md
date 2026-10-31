@@ -16,16 +16,33 @@ citations. Actions with side effects (drafting a work order) wait for human appr
 
 ## Results so far
 
+**Reference baseline (untuned, full English set).**
+
 | System | Queries | nDCG@10 | Recall@100 | Source |
 |---|---|---|---|---|
 | BM25 (bm25s defaults), page markdown | 283 English | 0.456 (95% CI 0.413–0.501) | 0.735 | [`bm25_baseline.json`](evals/results/bm25_baseline.json) |
 | Same index, all six query languages (replication) | 1,698 | 0.157 | — | same file; paper reports 0.156 |
 
 The second row reproduces the published BM25 figure for this corpus (ViDoRe V3, arXiv 2601.08620,
-Table 1) to within 0.001, which checks the evaluation harness. The published figure averages six
-query languages against English documents; English-only is roughly three times higher. All later
-tuning uses the 113-query dev split; the 170-query sealed split is scored once per frozen system
-([protocol](evals/PROTOCOL.md)).
+Table 1) to within 0.001, which checks the evaluation harness.
+
+**Retrieval design choices (113-query dev split only).** Embedding model: `BAAI/bge-small-en-v1.5`
+(33M parameters, CPU). Δ is the paired difference against BM25 on the same queries.
+
+| System | nDCG@10 (95% CI) | Recall@100 | Δ nDCG@10 vs BM25 (95% CI) |
+|---|---|---|---|
+| BM25 | 0.464 (0.399–0.529) | 0.714 | — |
+| Dense, whole page (truncated at 512 tokens) | 0.320 (0.267–0.374) | 0.634 | −0.143 (−0.194 to −0.095) |
+| Dense, structure-based chunks ≤384 tokens, max-pooled | 0.380 (0.323–0.437) | 0.684 | −0.084 (−0.133 to −0.036) |
+| Hybrid RRF (BM25 + dense pages) | 0.406 (0.348–0.466) | 0.747 | −0.057 (−0.096 to −0.019) |
+| **Hybrid RRF (BM25 + dense chunks)** | **0.460 (0.397–0.524)** | **0.760** | −0.004 (−0.036 to 0.028) |
+
+Source: [`dense_hybrid_dev.json`](evals/results/dense_hybrid_dev.json). Findings: chunking helps the
+dense retriever by 0.06 nDCG@10; a small dense model alone loses to BM25 on these manuals; the
+chunk-level hybrid matches BM25 on ranking and finds more relevant pages in its top 100, which is
+what a reranker needs. Per-query inspection: BM25 wins on rare exact terms ("Mechanical Beam
+Analytical Balance", "reamer", "HSV"); dense wins on paraphrase ("minimum brake lining thickness").
+The 170-query sealed split has not been scored.
 
 ## Data
 
@@ -61,6 +78,10 @@ python3 scripts/check_corpus.py data/vidore_v3_industrial   # writes docs/corpus
 python3 -m pip install -e ".[dev]"
 python3 -m pytest -q
 python3 scripts/run_bm25.py        # writes evals/results/bm25_baseline.json
+hf download BAAI/bge-small-en-v1.5 --local-dir models/bge-small-en-v1.5
+python3 scripts/embed_corpus.py --model models/bge-small-en-v1.5 --variant chunk
+python3 scripts/embed_corpus.py --model models/bge-small-en-v1.5 --variant page
+python3 scripts/run_dense_hybrid.py   # dev split only; writes evals/results/dense_hybrid_dev.json
 ```
 
 ## Layout

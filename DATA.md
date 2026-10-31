@@ -3,9 +3,10 @@
 | Data | Licence | Status | How it is used |
 |---|---|---|---|
 | ViDoRe V3 Industrial (27 USAF Technical Orders) | Paper: "commercially permissive license"; documents selected to meet "open license criteria" (arXiv 2601.08620). All 27 manuals carry "Distribution Statement A. Approved for public release; distribution is unlimited." (checked in the page text, 31 Oct 2026). | Dataset licence: **CC BY 4.0** (Hugging Face dataset page, checked 31 Oct 2026) | Document corpus, public retrieval benchmark (nDCG@10), reference answers for end-to-end evaluation |
+| `BAAI/bge-small-en-v1.5` embedding model | MIT (model card: "can be used for commercial purposes free of charge") | Read from the downloaded card, 31 Oct 2026 | Dense retrieval arm; weights downloaded to `models/`, not committed |
 
 Rules: data stays in `data/` (git-ignored); the repository ships code, download scripts and result
-files, not third-party documents or signals.
+files, not third-party documents or model weights.
 
 ## Attribution (CC BY 4.0)
 
