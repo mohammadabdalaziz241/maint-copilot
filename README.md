@@ -47,7 +47,8 @@ Reranking the top 20 adds +0.027 nDCG@10 over the hybrid (95% CI −0.006 to +0.
 [`rerank_dev_top20.json`](evals/results/rerank_dev_top20.json)): likely but not yet demonstrated on
 113 queries. Depth is a cost decision: on this 4-core CPU the reranker takes ~0.29 s per chunk pair,
 so top 20 costs ~14 s per query and top 50 (recall 0.678 vs 0.566) ~33 s; the deeper setting is
-deferred to a GPU run. The 170-query sealed split has not been scored.
+deferred to a GPU run. The 170-query sealed split has not been scored yet; the final test is
+pre-registered in [`docs/sealed_test_design.md`](docs/sealed_test_design.md).
 
 **Grounded answers (113 dev queries).** `claude-haiku-5-5` answers from the top-k pages with page
 citations; structured output restricts citations to the page ids it was given. `claude-sonnet-5-5`

@@ -1,13 +1,15 @@
-"""Answer dev queries from retrieved pages, judge them, and score citations.
+"""Answer one split's queries (dev by default) from retrieved pages, judge them, score citations.
 
 Contexts:
   rerank  top-k of the hybrid list after cross-encoder reranking (top 20 reranked)
   hybrid  top-k of the hybrid RRF list, no reranking
   oracle  the benchmark's relevant pages (grade 2 first), an upper bound for the answering step
 
-Every query's answer and verdict is cached in data/cache/answers/<config>/, so reruns cost nothing.
-Writes evals/results/answers_dev_<config>.json. Usage:
+Every query's answer and verdict is cached in data/cache/answers/<config>/ (sealed runs:
+sealed_<config>/), so reruns cost nothing. Writes evals/results/answers_<split>_<config>.json.
+Usage:
     python scripts/run_answers.py --context rerank --k 5
+    python scripts/run_answers.py --split sealed --context hybrid --k 10
 """
 
 from __future__ import annotations
@@ -18,13 +20,12 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from maint_copilot.answer import PROMPT_VERSION, answer_question, citation_scores
-from maint_copilot.data import load_benchmark
+from maint_copilot.data import load_benchmark, load_split
 from maint_copilot.judge import judge_answer
 from maint_copilot.llm import Usage, client
 from maint_copilot.reporting import summarise_records
 
 RERANK_CACHE = Path("data/cache/rerank/bge-reranker-base_top20")
-CANDIDATES = Path("data/cache/rerank/candidates_dev_hybrid.json")
 
 
 def context_ids(mode: str, qid: int, k: int, qrels, candidates) -> list[int]:
@@ -51,17 +52,21 @@ def main() -> None:
         default=PROMPT_VERSION,
         help="summarise a cached run made with an earlier prompt version (no API calls)",
     )
+    ap.add_argument("--split", choices=["dev", "sealed"], default="dev")
     args = ap.parse_args()
 
     bench = load_benchmark()
-    dev = json.loads(Path("evals/splits/split_v1.json").read_text())["dev"]
-    queries = bench.queries.set_index("query_id").loc[dev]
+    ids = load_split(args.split)
+    queries = bench.queries.set_index("query_id").loc[ids]
     pages = bench.corpus.set_index("corpus_id")
-    candidates = {int(k): v for k, v in json.loads(CANDIDATES.read_text()).items()}
+    cand_file = Path(f"data/cache/rerank/candidates_{args.split}_hybrid.json")
+    candidates = {int(k): v for k, v in json.loads(cand_file.read_text()).items()}
     config = f"{args.context}_k{args.k}_{args.model}_{args.prompt_version}" + (
         "_thinking" if args.thinking else ""
     )
-    cache = Path("data/cache/answers") / config
+    cache = Path("data/cache/answers") / (
+        config if args.split == "dev" else f"{args.split}_{config}"
+    )
     cache.mkdir(parents=True, exist_ok=True)
     llm = client()
 
@@ -103,10 +108,10 @@ def main() -> None:
         return rec
 
     with ThreadPoolExecutor(args.workers) as pool:
-        records = list(pool.map(run_one, [int(q) for q in dev]))
+        records = list(pool.map(run_one, ids))
 
     summary = {
-        "split": "dev",
+        "split": args.split,
         "config": config,
         "context": args.context,
         "k": args.k,
@@ -118,7 +123,7 @@ def main() -> None:
     }
     suffix = "_thinking" if args.thinking else ""
     out = Path(
-        f"evals/results/answers_dev_{args.context}_k{args.k}_{args.prompt_version}{suffix}.json"
+        f"evals/results/answers_{args.split}_{args.context}_k{args.k}_{args.prompt_version}{suffix}.json"
     )
     out.write_text(json.dumps({"summary": summary, "records": records}, indent=1))
     print(json.dumps(summary, indent=1))

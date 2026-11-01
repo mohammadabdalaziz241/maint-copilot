@@ -1,4 +1,4 @@
-"""Rerank the hybrid retriever's top-N pages with a cross-encoder, on the dev split.
+"""Rerank the hybrid retriever's top-N pages with a cross-encoder, on one split (dev by default).
 
 A page's rerank score is the maximum over its chunks (the same chunks the dense index uses), so
 content beyond the model's 512-token window is not lost. Pair scores are cached per query in
@@ -14,7 +14,7 @@ from pathlib import Path
 
 from sentence_transformers import CrossEncoder, SentenceTransformer
 
-from maint_copilot.data import load_benchmark
+from maint_copilot.data import load_benchmark, load_split
 from maint_copilot.evaluation import paired_bootstrap, score_run, summarise
 from maint_copilot.retrieval import BM25Retriever, ChunkIndex, DenseRetriever, HybridRetriever
 
@@ -26,15 +26,16 @@ def main() -> None:
     ap.add_argument("--chunks", default="data/cache/bge-small-en-v1.5/chunk384")
     ap.add_argument("--top-n", type=int, default=50)
     ap.add_argument("--time-budget", type=float, default=0)
+    ap.add_argument("--split", choices=["dev", "sealed"], default="dev")
     args = ap.parse_args()
 
     bench = load_benchmark()
-    dev = json.loads(Path("evals/splits/split_v1.json").read_text())["dev"]
-    q = bench.queries[bench.queries["query_id"].isin(dev)].reset_index(drop=True)
+    ids = load_split(args.split)
+    q = bench.queries[bench.queries["query_id"].isin(ids)].reset_index(drop=True)
     qids, texts = q["query_id"].astype(int).tolist(), q["query"].tolist()
 
     index = ChunkIndex.load(Path(args.chunks))
-    cand_file = Path("data/cache/rerank/candidates_dev_hybrid.json")
+    cand_file = Path(f"data/cache/rerank/candidates_{args.split}_hybrid.json")
     if cand_file.exists():
         candidates = {int(k): v for k, v in json.loads(cand_file.read_text()).items()}
     else:
@@ -86,7 +87,7 @@ def main() -> None:
 
     s_h, s_r = score_run(hybrid_run, bench.qrels), score_run(reranked_run, bench.qrels)
     result = {
-        "split": "dev",
+        "split": args.split,
         "n_queries": len(qids),
         "candidates": f"hybrid RRF(bm25, dense chunks) top {args.top_n}",
         "reranker": args.reranker,
@@ -101,7 +102,7 @@ def main() -> None:
             "hybrid+rerank": {str(k): round(v["ndcg@10"], 4) for k, v in s_r.items()},
         },
     }
-    out = Path(f"evals/results/rerank_dev_top{args.top_n}.json")
+    out = Path(f"evals/results/rerank_{args.split}_top{args.top_n}.json")
     out.write_text(json.dumps(result, indent=1))
     for name, s in result["systems"].items():
         nd, mrr = s["ndcg@10"], s["mrr"]["mean"]

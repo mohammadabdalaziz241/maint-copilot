@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -9,6 +11,21 @@ import pandas as pd
 import pyarrow.parquet as pq
 
 DEFAULT_ROOT = Path("data/vidore_v3_industrial")
+SPLIT_FILE = Path("evals/splits/split_v1.json")
+SEALED_SHA256 = "2a6fb737f93a33dbc17ee72de5b0bc437574feee58348ae3b2f9f20cc9725198"
+
+
+def load_split(name: str, path: Path = SPLIT_FILE) -> list[int]:
+    """Query ids of the pre-registered "dev" or "sealed" split; the sealed list is hash-checked."""
+    if name not in ("dev", "sealed"):
+        raise ValueError(f"unknown split {name!r}")
+    split = json.loads(path.read_text())
+    ids = [int(i) for i in split[name]]
+    if name == "sealed":
+        digest = hashlib.sha256(json.dumps(split["sealed"]).encode()).hexdigest()
+        if digest != SEALED_SHA256:
+            raise ValueError(f"sealed id list does not match the pre-registered SHA-256 ({digest})")
+    return ids
 
 
 def _read(root: Path, split: str, columns: list[str]) -> pd.DataFrame:

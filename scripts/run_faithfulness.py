@@ -1,9 +1,11 @@
 """Check claim-level faithfulness of a cached answer run.
 
-Reads evals/results/answers_dev_<config>.json, re-builds each answer's context pages, and asks the
-verifier model to label every claim. Results are cached per query in data/cache/faithfulness/.
-Writes evals/results/faithfulness_<config>.json. Usage:
+Reads an answer or agent results file, re-builds each answer's context pages, and asks the verifier
+model to label every claim. Results are cached per query in data/cache/faithfulness/<stem>_<model>/.
+Writes evals/results/faithfulness_<stem>.json, where <stem> is the input name without "answers_".
+Usage:
     python scripts/run_faithfulness.py evals/results/answers_dev_rerank_k10_v3.json
+    python scripts/run_faithfulness.py evals/results/agent_sealed_a1.1_r0.json
 """
 
 from __future__ import annotations

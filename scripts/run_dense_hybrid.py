@@ -1,8 +1,10 @@
-"""Score BM25, dense (page and chunk variants) and hybrid RRF on the dev split.
+"""Score BM25, dense and hybrid RRF retrieval on one split (dev by default).
 
 Uses the shared retrieval module (the same code path as the agent's search tool). Reads cached
-embeddings written by scripts/embed_corpus.py. Writes evals/results/dense_hybrid_dev.json. The
-sealed split is not touched.
+embeddings written by scripts/embed_corpus.py. Writes evals/results/dense_hybrid_<split>.json and
+the hybrid top-100 candidates (data/cache/rerank/candidates_<split>_hybrid.json) if not yet cached.
+On the sealed split only the frozen systems are scored (BM25, dense chunks, hybrid RRF of the two);
+see docs/sealed_test_design.md.
 """
 
 from __future__ import annotations
@@ -14,7 +16,7 @@ from pathlib import Path
 
 from sentence_transformers import SentenceTransformer
 
-from maint_copilot.data import load_benchmark
+from maint_copilot.data import load_benchmark, load_split
 from maint_copilot.evaluation import paired_bootstrap, rrf, score_run, summarise
 from maint_copilot.retrieval import BGE_QUERY_PROMPT, BM25Retriever, ChunkIndex, DenseRetriever
 
@@ -25,11 +27,12 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", default="models/bge-small-en-v1.5")
     ap.add_argument("--max-tokens", type=int, default=384)
+    ap.add_argument("--split", choices=["dev", "sealed"], default="dev")
     args = ap.parse_args()
 
     bench = load_benchmark()
-    dev = json.loads(Path("evals/splits/split_v1.json").read_text())["dev"]
-    q = bench.queries[bench.queries["query_id"].isin(dev)].reset_index(drop=True)
+    ids = load_split(args.split)
+    q = bench.queries[bench.queries["query_id"].isin(ids)].reset_index(drop=True)
     qids, texts = q["query_id"].astype(int).tolist(), q["query"].tolist()
 
     runs: dict[str, dict[int, list[int]]] = {}
@@ -38,10 +41,10 @@ def main() -> None:
     model = SentenceTransformer(args.model, device="cpu", local_files_only=True)
     base = Path("data/cache") / Path(args.model).name
     timing = {}
-    for name, folder in (
-        ("dense_page", base / "page"),
-        ("dense_chunk", base / f"chunk{args.max_tokens}"),
-    ):
+    variants = [("dense_page", base / "page"), ("dense_chunk", base / f"chunk{args.max_tokens}")]
+    if args.split == "sealed":
+        variants = variants[1:]
+    for name, folder in variants:
         if (folder / "manifest.json").exists():
             dense = DenseRetriever(model, ChunkIndex.load(folder))
             t0 = time.perf_counter()
@@ -55,9 +58,15 @@ def main() -> None:
                 for qid in qids
             }
 
+    cand_file = Path(f"data/cache/rerank/candidates_{args.split}_hybrid.json")
+    if not cand_file.exists():
+        cand_file.parent.mkdir(parents=True, exist_ok=True)
+        hybrid = runs["hybrid_rrf(bm25,dense_chunk)"]
+        cand_file.write_text(json.dumps({str(k): v for k, v in hybrid.items()}))
+
     scores = {name: score_run(run, bench.qrels) for name, run in runs.items()}
     result = {
-        "split": "dev",
+        "split": args.split,
         "n_queries": len(qids),
         "embedding_model": args.model,
         "query_prompt": BGE_QUERY_PROMPT,
@@ -75,7 +84,7 @@ def main() -> None:
             for name, s in scores.items()
         },
     }
-    Path("evals/results/dense_hybrid_dev.json").write_text(json.dumps(result, indent=1))
+    Path(f"evals/results/dense_hybrid_{args.split}.json").write_text(json.dumps(result, indent=1))
     for name, s in result["systems"].items():
         d = result["vs_bm25_ndcg@10"].get(name)
         delta = f"  Δ vs BM25 {d['mean_diff']:+.3f} {d['ci95']}" if d else ""

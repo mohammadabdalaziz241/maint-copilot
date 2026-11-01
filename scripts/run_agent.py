@@ -1,8 +1,10 @@
-"""Run the agent on the dev split, judge its answers, and summarise (optionally repeated runs).
+"""Run the agent on one split (dev by default), judge its answers, and summarise.
 
-Each repeat is cached per query in data/cache/agent/<config>/r<i>/. Writes
-evals/results/agent_dev_<version>_r<i>.json for every repeat. Usage:
+Each repeat is cached per query in data/cache/agent/<config>/r<i>/ (sealed runs:
+sealed_<config>/r<i>/). Writes evals/results/agent_<split>_<version>_r<i>.json for every repeat.
+Usage:
     python scripts/run_agent.py --repeats 3
+    python scripts/run_agent.py --split sealed
 """
 
 from __future__ import annotations
@@ -24,7 +26,7 @@ from maint_copilot.agent import (
     run_agent,
 )
 from maint_copilot.answer import citation_scores
-from maint_copilot.data import load_benchmark
+from maint_copilot.data import load_benchmark, load_split
 from maint_copilot.judge import judge_answer
 from maint_copilot.llm import Usage, client
 from maint_copilot.reporting import summarise_records
@@ -39,10 +41,11 @@ def main() -> None:
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--max-tool-calls", type=int, default=8)
     ap.add_argument("--self-check", action="store_true", help="agent v2: self-check step")
+    ap.add_argument("--split", choices=["dev", "sealed"], default="dev")
     args = ap.parse_args()
 
     bench = load_benchmark()
-    dev = [int(q) for q in json.loads(Path("evals/splits/split_v1.json").read_text())["dev"]]
+    ids = load_split(args.split)
     queries = bench.queries.set_index("query_id")
     embedder = SentenceTransformer("models/bge-small-en-v1.5", device="cpu", local_files_only=True)
     hybrid = HybridRetriever(
@@ -62,7 +65,8 @@ def main() -> None:
     config = f"{version}_{args.model}_tc{args.max_tool_calls}"
 
     for rep in range(args.repeats):
-        cache = Path("data/cache/agent") / config / f"r{rep}"
+        folder = config if args.split == "dev" else f"{args.split}_{config}"
+        cache = Path("data/cache/agent") / folder / f"r{rep}"
         cache.mkdir(parents=True, exist_ok=True)
 
         def run_one(qid: int, cache: Path = cache) -> dict:
@@ -107,14 +111,14 @@ def main() -> None:
             return rec
 
         with ThreadPoolExecutor(args.workers) as pool:
-            records = list(pool.map(run_one, dev))
+            records = list(pool.map(run_one, ids))
 
         calls = np.array([r["tool_calls"] for r in records])
         causes: dict[str, int] = {}
         for r in records:
             causes[r["stop_cause"]] = causes.get(r["stop_cause"], 0) + 1
         summary = {
-            "split": "dev",
+            "split": args.split,
             "config": config,
             "repeat": rep,
             "agent_version": version,
@@ -134,7 +138,7 @@ def main() -> None:
                 ),
             },
         }
-        out = Path(f"evals/results/agent_dev_{version}_r{rep}.json")
+        out = Path(f"evals/results/agent_{args.split}_{version}_r{rep}.json")
         out.write_text(json.dumps({"summary": summary, "records": records}, indent=1))
         s = summary
         print(

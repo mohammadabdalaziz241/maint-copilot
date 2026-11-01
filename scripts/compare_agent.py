@@ -1,7 +1,8 @@
-"""Apply the pre-registered Phase 3 comparison: agent vs non-agentic baseline on dev.
+"""Apply the pre-registered comparison: agent vs non-agentic baseline on one split.
 
-Baseline: evals/results/answers_dev_hybrid_k10_v3.json (same retriever, same answer rules).
-Writes evals/results/agent_vs_baseline_dev_<agent version>.json.
+Baseline: evals/results/answers_<split>_hybrid_k10_v3.json (same retriever, same answer rules).
+Writes evals/results/agent_vs_baseline_<split>_<agent version>.json. pass^k is reported only when
+more than one agent run exists (the sealed test has one run; docs/sealed_test_design.md).
 """
 
 from __future__ import annotations
@@ -19,11 +20,13 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--agent-version", required=True)
     ap.add_argument("--repeats", type=int, default=3)
+    ap.add_argument("--split", choices=["dev", "sealed"], default="dev")
     args = ap.parse_args()
 
-    base = json.loads(Path("evals/results/answers_dev_hybrid_k10_v3.json").read_text())
+    res = Path("evals/results")
+    base = json.loads((res / f"answers_{args.split}_hybrid_k10_v3.json").read_text())
     runs = [
-        json.loads(Path(f"evals/results/agent_dev_{args.agent_version}_r{i}.json").read_text())
+        json.loads((res / f"agent_{args.split}_{args.agent_version}_r{i}.json").read_text())
         for i in range(args.repeats)
     ]
     b = {r["query_id"]: r for r in base["records"]}
@@ -56,6 +59,7 @@ def main() -> None:
     cost_b = base["summary"]["estimated_cost_usd"]["answer"] / len(ids)
     cost_a = np.mean([run["summary"]["estimated_cost_usd"]["answer"] for run in runs]) / len(ids)
     result = {
+        "split": args.split,
         "baseline": "hybrid top 10, prompt v3, claude-haiku-5-5",
         "agent": runs[0]["summary"]["config"],
         "n_queries": len(ids),
@@ -72,7 +76,9 @@ def main() -> None:
         "pass_hat_k": {
             "k": len(runs),
             "agent_all_repeats_pass": round(float(np.mean(pass_all)), 3),
-        },
+        }
+        if len(runs) > 1
+        else None,
         "groups": {
             name: {"n": len(sel), "baseline": rate(b, sel), "agent_r0": rate(a0, sel)}
             for name, sel in groups.items()
@@ -90,7 +96,7 @@ def main() -> None:
     result["success_rule_met"] = bool(
         lo > 0 and result["answer_cost_usd_per_question"]["ratio"] <= 3
     )
-    out = Path(f"evals/results/agent_vs_baseline_dev_{args.agent_version}.json")
+    out = res / f"agent_vs_baseline_{args.split}_{args.agent_version}.json"
     out.write_text(json.dumps(result, indent=1))
     print(json.dumps(result, indent=1))
 
