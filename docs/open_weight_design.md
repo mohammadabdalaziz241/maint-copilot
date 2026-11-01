@@ -43,3 +43,15 @@ model tried and why it was rejected is recorded.
   per 1,000 questions, and cost per 1,000 questions at a stated range of cloud GPU hourly prices,
   against Haiku's token cost.
 - Faithfulness is not checked in this phase (budget); this is stated with the results.
+
+## Outcome (1 Nov 2026)
+
+- Model selected by the rule: `openai/gpt-oss-20b` (first in order; loaded on the RTX 4000 Ada with
+  vLLM 0.32.0 and returned 3/3 schema-valid answers in the smoke test). No other model was tried.
+- One implementation detail differs from the Haiku runs: a single line describing the JSON format
+  is appended to the user message, because vLLM constrains decoding to the schema but, unlike the
+  Anthropic API, does not tell the model what the schema is (vLLM's documentation recommends this).
+- Judge pass rate 0.522 vs Haiku 0.478; paired difference +0.044 (95% CI −0.035 to +0.124).
+  Lower bound above −0.10: **comparable**.
+- The vLLM version was not captured by the answer script (the interpreter could not import vllm);
+  it is taken from the setup log (0.32.0).

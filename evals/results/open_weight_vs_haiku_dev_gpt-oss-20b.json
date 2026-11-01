@@ -1,0 +1,50 @@
+{
+ "paired_questions": 113,
+ "pass_rate": {
+  "haiku": 0.4779,
+  "gpt-oss-20b": 0.5221
+ },
+ "paired_diff_open_minus_haiku": {
+  "mean": 0.0442,
+  "ci95": [
+   -0.0354,
+   0.1239
+  ]
+ },
+ "flips": {
+  "fail_to_pass": 14,
+  "pass_to_fail": 9
+ },
+ "non_inferiority_margin": -0.1,
+ "verdict": "comparable",
+ "latency_s": {
+  "haiku_p50": {
+   "p50": 2.5,
+   "p95": 4.39
+  },
+  "open_weight": {
+   "p50": 11.61,
+   "p95": 26.86
+  }
+ },
+ "cost": {
+  "haiku_answer_usd_per_1000_questions": 1.405,
+  "gpu_hours_per_1000_sequential": 3.607,
+  "throughput_questions_per_min": 12.86,
+  "throughput_concurrency": 8,
+  "gpu_hours_per_1000_batched": 1.296,
+  "gpu_usd_per_1000_batched": [
+   0.181,
+   0.959
+  ],
+  "gpu_usd_per_1000_sequential": [
+   0.505,
+   2.669
+  ],
+  "gpu_price_range_usd_per_hour": [
+   0.14,
+   0.74
+  ],
+  "gpu_price_source": "third-party summary, 17 Oct 2026, unverified"
+ }
+}

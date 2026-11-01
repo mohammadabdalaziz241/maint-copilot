@@ -1,0 +1,10 @@
+{
+ "answers": 113,
+ "valid": 113,
+ "errors": [],
+ "latency_p50_s": 11.61,
+ "latency_p95_s": 26.09,
+ "wall_s_this_session": 1467.5,
+ "questions_per_min_this_session": 4.62,
+ "concurrency": 1
+}

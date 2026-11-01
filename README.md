@@ -205,6 +205,39 @@ A human-approval path for work orders is included: the agent can only propose a 
 person must approve it, decisions are final, and drafts may only cite pages the agent read
 ([`work_orders.py`](src/maint_copilot/work_orders.py), tests in `tests/test_work_orders.py`).
 
+## Phase 4: open-weight model on a university GPU (dev split)
+
+Pre-registered in [`docs/open_weight_design.md`](docs/open_weight_design.md). The selection rule
+picked the first model in a fixed order that loads and passes a smoke test on one **RTX 4000 Ada
+(20 GB)**: `openai/gpt-oss-20b` (Apache-2.0, native MXFP4), served with **vLLM 0.32.0**
+(PyTorch 2.13, CUDA 13), 17.8 of 20.5 GB GPU memory in use. Only the answering model changes: the
+113 dev prompts are byte-identical to the Haiku baseline's (verified by checksum), citations are
+constrained by the same JSON schema, and the same frozen judge scores both. Scripts in
+[`cluster/`](cluster/); answers in `evals/cluster/`.
+
+| Dev, hybrid top 10, prompt v3 | `claude-haiku-5-5` (API) | `gpt-oss-20b` (self-hosted) |
+|---|---|---|
+| Judge pass rate | 0.478 | 0.522 (95% CI 0.434–0.611) |
+| Paired difference (gpt-oss − Haiku) | | +0.044 (95% CI −0.035 to +0.124); 14 FAIL→PASS, 9 PASS→FAIL |
+| **Pre-registered verdict (margin −0.10)** | | **comparable** |
+| Schema-valid answers | 113/113 | 113/113 |
+| Citation precision / at least one relevant page cited | 0.524 / 0.788 | 0.510 / 0.628 |
+| Latency p50 / p95, one request at a time | 2.5 s / 4.4 s | 11.6 s / 26.9 s |
+| Throughput, 8 concurrent requests | | 12.9 questions/min |
+| Cost per 1,000 questions | $1.41 (tokens) | $0.18–0.96 batched, $0.51–2.67 one at a time (GPU-hours × $0.14–0.74/h) |
+
+Source: [`open_weight_vs_haiku_dev_gpt-oss-20b.json`](evals/results/open_weight_vs_haiku_dev_gpt-oss-20b.json).
+What it shows:
+- **Quality is comparable**: the lower confidence bound (−0.035) clears the pre-registered −0.10
+  margin; the point estimate favours gpt-oss but the CI includes zero, so it is not "better".
+- **It is 4.6× slower per request** (median 11.6 s vs 2.5 s), mostly from its built-in reasoning
+  (about 890 output tokens per answer at the default setting), and it cites a relevant page less
+  often (0.63 vs 0.79 of answers).
+- **Self-hosting only wins on cost when the GPU is kept busy**: batched, it is cheaper than Haiku at
+  any price in the range; one request at a time it ranges from cheaper to nearly twice the cost.
+  The GPU price range is from a third-party summary (17 Oct 2026) and is not verified.
+- Faithfulness was not checked for this arm (budget), as stated in the pre-registration.
+
 ## Data
 
 Corpus: ViDoRe V3 Industrial: 27 USAF Technical Orders (English), 5,244 pages with page images and
