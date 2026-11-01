@@ -60,3 +60,28 @@ non-agentic baseline is re-run under the same condition (hybrid top 10, prompt v
    submission is returned to the agent as an error instead of being accepted.
 3. The baseline (hybrid top 10, no reranking, prompt v3) was run before the agent:
    judge pass rate 0.478 (95% CI 0.389–0.575).
+
+## Version 2 (a2), fixed 1 Nov 2026 before any a2 code was run
+
+**Why.** v1 (a1.1) beat the baseline on correctness (+0.115, 95% CI +0.035 to +0.195) but was
+measurably less faithful by the same verifier: supported share per answer −0.044 (95% CI −0.077
+to −0.010), unsupported claims per answer +0.164 (+0.036 to +0.300).
+
+**Change.** After `submit_answer`, a separate self-check call (`claude-haiku-5-5`, the agent's own
+model, not the evaluation verifier) splits the draft into claims, checks each against the pages
+the agent read with a quoted piece of evidence, and rewrites the answer keeping only supported
+content (no new facts; citations restricted to pages read). Quotes are checked against the page
+text in code and the rate is logged. Everything else (tools, budgets, prompts) is unchanged.
+
+**Experiment.** One run of a2 on the 113 dev questions, judged by the same frozen judge and
+checked by the same verifier (`claude-sonnet-5-5`), compared pairwise with the same hybrid
+baseline as v1.
+
+**Success rule (all three):**
+1. Faithfulness no worse than the baseline: the paired difference in supported share per answer
+   has a 95% CI that includes zero or lies above it.
+2. Correctness still above the baseline: paired pass-rate difference with 95% CI above zero.
+3. Answer cost per question at most 3× the baseline (self-check call included).
+
+If a2 fails any rule, v1 is kept and reported with its trade-off. Repeats (pass^3) are run only
+if a2 passes.
