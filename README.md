@@ -14,6 +14,21 @@ hybrid keyword and embedding retriever, reads the pages it chooses, and answers 
 citations; code allows it to cite only pages it has read in full. Every answer is a typed object.
 Drafting a work order waits for a named person's approval.
 
+```mermaid
+flowchart LR
+  Q[Question] --> A["Agent loop<br/>claude-haiku-5-5<br/>at most 8 tool calls, $0.05"]
+  A -- search_pages --> R["Hybrid retriever<br/>BM25 + bge-small chunks, RRF"]
+  R --> C[("5,244 pages<br/>27 Technical Orders")]
+  A -- "read_pages, read_adjacent" --> C
+  A -- submit_answer --> G{"Every cited page<br/>read in full?"}
+  G -- "no: rejected" --> A
+  G -- yes --> O["Typed answer<br/>with page citations"]
+  O --> E["Evaluation: judge vs human reference,<br/>claim-level faithfulness check"]
+```
+
+One held-out run, step by step, including a submission the code rejected because it cited a page
+the agent had not opened: [`docs/example_trace.md`](docs/example_trace.md).
+
 The point of the project is the evaluation. Design choices were made on 113 development
 questions; the final claims were then tested once on 170 held-out questions that played no part
 in any choice.
@@ -307,6 +322,22 @@ What it shows:
   The GPU price range is from a third-party summary (17 Oct 2026) and is not verified.
 - Faithfulness was not checked for this arm (budget), as stated in the pre-registration.
 
+## Limitations
+
+- **Text only.** Answers use the page text supplied with the dataset; figures and diagrams are not
+  read. On dev, questions whose evidence includes figures passed least often (0.42).
+- **Small test sets.** 170 held-out questions from one domain in English, so intervals are wide;
+  the agent was run once on them (on dev, three runs ranged 0.593–0.655).
+- **Automatic grading.** Correctness is judged by a model against a human reference answer,
+  checked against 40 blind labels from one annotator; the judge is stricter than the human on
+  open-ended questions. The faithfulness verifier misses some unsupported claims (20-claim human
+  spot check), so only paired differences are claimed, not absolute faithfulness rates.
+- **The agent does not use the reranker,** which was the best retriever; the reranker could not
+  run where the agent ran.
+- **Costs are estimates** from logged tokens and third-party price lists; they matched the billed
+  total within 1.3% once (1 Nov 2026).
+- **No user interface.** The work-order approval path is tested code, not an application.
+
 ## Data
 
 Corpus: ViDoRe V3 Industrial: 27 USAF Technical Orders (English), 5,244 pages with page images and
@@ -335,7 +366,7 @@ python3 -m pip install pandas pyarrow
 python3 scripts/check_corpus.py data/vidore_v3_industrial   # writes docs/corpus_check.md
 ```
 
-### Reproduce the baseline
+### Reproduce
 
 ```bash
 python3 -m pip install -e ".[dev]"
@@ -366,16 +397,19 @@ python3 scripts/run_faithfulness.py evals/results/answers_sealed_hybrid_k10_v3.j
 python3 scripts/run_faithfulness.py evals/results/agent_sealed_a1.1_r0.json
 python3 scripts/compare_faithfulness.py --split sealed --agent-version a1.1
 python3 scripts/summarise_sealed.py      # applies the decision rules; no API calls
+python3 scripts/show_trace.py --split sealed --query 218 --out docs/example_trace.md
 ```
 
 ## Layout
 
 ```
-src/maint_copilot/   package code (ingest, retrieval, agent, tools)
-scripts/             one-off and reproducible entry points
-evals/               golden set manifests, evaluation harness, reports
-docs/                design notes and data checks
-data/                local downloads (git-ignored)
+src/maint_copilot/   package: data loading, retrieval, answering, judge, faithfulness, agent, work orders
+scripts/             entry points for every experiment (all API results cached per question)
+evals/               protocol, split, calibration labels, committed results (evals/results/)
+docs/                pre-registered designs, data check, example trace
+cluster/             scripts for the open-weight run on a GPU machine (vLLM)
+tests/               unit tests (pytest)
+data/, models/       local downloads (git-ignored)
 ```
 
 ## Licence

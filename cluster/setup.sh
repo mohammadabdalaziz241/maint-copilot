@@ -2,7 +2,7 @@
 # One-time setup on the Surrey machine. Everything (venv, caches, model weights) goes to scratch:
 # the home folder has only ~5 GB free.
 set -euo pipefail
-BASE=/scratch/ma06314/maint-copilot-cluster
+BASE=${MC_BASE:-/scratch/$USER/maint-copilot-cluster}
 mkdir -p "$BASE"/{cache/uv,cache/pip,cache/hf,logs,results}
 export UV_CACHE_DIR=$BASE/cache/uv PIP_CACHE_DIR=$BASE/cache/pip HF_HOME=$BASE/cache/hf
 export XDG_CACHE_HOME=$BASE/cache TMPDIR=$BASE/cache

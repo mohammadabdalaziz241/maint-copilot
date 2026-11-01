@@ -4,7 +4,7 @@
 set -euo pipefail
 MODEL=${1:?model id}
 shift || true
-BASE=/scratch/ma06314/maint-copilot-cluster
+BASE=${MC_BASE:-/scratch/$USER/maint-copilot-cluster}
 export HF_HOME=$BASE/cache/hf XDG_CACHE_HOME=$BASE/cache TMPDIR=$BASE/cache
 # shellcheck disable=SC1091
 source "$BASE/venv/bin/activate"
