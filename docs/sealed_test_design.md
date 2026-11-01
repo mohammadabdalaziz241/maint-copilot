@@ -99,3 +99,18 @@ the billed spend within 1.3%.
 | **Total** | | **≈ $13.30** |
 
 The run stops and is reported as incomplete if the estimated spend reaches $15.
+
+## Outcome (1 Nov 2026)
+
+Run at commit `6987267`. Correctness: agent v1 minus baseline +0.077 (95% CI +0.018 to +0.141),
+cost 2.13×, so the dev result **replicates**. Faithfulness: supported share per answer −0.029
+(95% CI −0.057 to −0.002), so the dev finding that the agent is less faithful **replicates**.
+Retrieval: hybrid vs BM25 and dense vs BM25 confirmed; reranking vs hybrid not confirmed in the
+sense of this plan, because the sealed gain (+0.080, CI +0.049 to +0.114) is clear where the dev
+gain was not. Full figures: `evals/results/sealed_summary.json` and the README.
+
+Deviations: (1) the paid steps started while the free sealed reranking was still running; no
+paid step uses the reranker. (2) `run_faithfulness.py` crashed on one agent answer (query 107)
+submitted without reading any page; a guard added after the crash records it as a verifier
+failure, reported as skipped as this plan specifies. (3) The faithfulness runs were restarted in
+parallel; cached checks were kept and a few in-flight calls were repeated. Estimated cost $12.58.

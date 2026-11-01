@@ -2,19 +2,87 @@
 
 An agentic retrieval assistant over industrial maintenance documents, built to be **evaluated, not demoed**.
 
-> Status: Phase 1 (data check and retrieval baseline). Nothing below is measured yet; every number
-> that appears in this README will link to a committed result file.
+Every number in this README links to a committed result file. Each experiment was written down
+before it ran, and results that went against the design are reported as they came out.
 
-## What it will do
+## What it does
 
 A maintenance technician asks a question about USAF ground-support and servicing procedures: fuel
-servicing, corrosion control, coatings, torque tools, pressure systems, shop practice. The system
-retrieves the relevant pages, and a bounded tool-calling agent decides whether it needs more than
-retrieval: querying tables extracted from the manuals (SQL), doing unit and torque calculations, or
-pulling the warnings and steps of a procedure. Every answer is a typed object with page-level
-citations. Actions with side effects (drafting a work order) wait for human approval.
+servicing, corrosion control, coatings, torque tools, pressure systems, shop practice. A bounded
+tool-calling agent (`claude-haiku-5-5`, at most 8 tool calls) searches 5,244 manual pages with a
+hybrid keyword and embedding retriever, reads the pages it chooses, and answers with page-level
+citations; code allows it to cite only pages it has read in full. Every answer is a typed object.
+Drafting a work order waits for a named person's approval.
 
-## Results so far
+The point of the project is the evaluation. Design choices were made on 113 development
+questions; the final claims were then tested once on 170 held-out questions that played no part
+in any choice.
+
+## Final result: 170 held-out questions
+
+Run once on 1 Nov 2026, with every system frozen and the decision rules written down beforehand
+([`docs/sealed_test_design.md`](docs/sealed_test_design.md)). All outcomes, judged against those
+rules: [`sealed_summary.json`](evals/results/sealed_summary.json).
+
+**The agent answers more questions correctly than retrieve-once RAG, and its answers are less
+faithful to the manuals.** Both findings from development held up on new questions.
+
+| 170 held-out questions | Baseline: retrieve once, top 10 pages | Agent v1 |
+|---|---|---|
+| Judge pass rate | 0.547 | **0.624** |
+| Paired difference (95% CI) | | **+0.077 (+0.018 to +0.141)**; 22 FAIL→PASS, 9 PASS→FAIL |
+| Estimated pass rate by the human standard (judge calibration) | 0.66 (0.51–0.76) | 0.72 (0.57–0.80) |
+| Questions where the baseline retrieved no relevant page (40) | 0.10 | 0.33 |
+| Questions written from document summaries (104) | 0.43 | 0.54 |
+| Claims supported per answer (166 paired answers) | 0.926 | 0.896; difference −0.029 (−0.057 to −0.002) |
+| Answers with no unsupported claim | 0.958 | 0.747; difference −0.211 (−0.283 to −0.139) |
+| Unsupported claims per answer | 0.04 | 0.41; difference +0.37 (+0.23 to +0.52) |
+| Unsupported fact claims, all checked answers | 0.6% (7/1,241) | 3.3% (69/2,079) |
+| Answer cost per question | $0.0013 | $0.0028 (2.1×) |
+| Median latency | 2.5 s | 6.2 s |
+
+Sources: [`agent_vs_baseline_sealed_a1.1.json`](evals/results/agent_vs_baseline_sealed_a1.1.json),
+[`faithfulness_agent_vs_baseline_sealed_a1.1.json`](evals/results/faithfulness_agent_vs_baseline_sealed_a1.1.json).
+
+| Pre-registered question | Development (113) | Held-out (170) | Outcome |
+|---|---|---|---|
+| Agent more often correct, at ≤ 3× cost? | +0.115 (+0.035 to +0.195), 2.1× | +0.077 (+0.018 to +0.141), 2.1× | **replicated** |
+| Agent less faithful (claims supported per answer)? | −0.044 (−0.077 to −0.010) | −0.029 (−0.057 to −0.002) | **replicated** |
+| Hybrid retrieval no better than BM25 (nDCG@10)? | −0.004 (−0.036 to +0.028) | −0.004 (−0.039 to +0.028) | confirmed |
+| Dense retrieval alone worse than BM25? | −0.084 (−0.133 to −0.036) | −0.078 (−0.126 to −0.032) | confirmed |
+| Reranking the hybrid top 20 helps? | +0.027 (−0.006 to +0.060) | **+0.080 (+0.049 to +0.114)** | not confirmed: clearer on held-out data than in development |
+
+What this means:
+- **The correctness gain is real but smaller than in development** (+7.7 points rather than
+  +11.5), and it comes where the agent was designed to help: when one-shot retrieval misses, the
+  agent searches again and passes a third of those questions instead of a tenth.
+- **The faithfulness cost is real and larger on these questions.** One agent answer in four
+  contains a claim the verifier could not find in the pages the agent read, against one in
+  twenty-four for the baseline. The agent writes longer answers (12.2 factual claims vs 7.5 per answer) and
+  more of them go beyond its sources. Agent v2's self-check fixed this on dev but missed its other
+  conditions, so it was not carried into this test. For maintenance instructions, that trade-off
+  decides which version to deploy.
+- **Reranking is worth more than development suggested**: nDCG@10 0.527 vs 0.447 for the hybrid
+  alone. Neither answering system in this comparison uses it, because the agent's workspace could
+  not hold the reranker; adding it is the most promising next step.
+- The human-standard estimates apply the judge's measured strictness (calibrated on 40 dev
+  answers of the retrieve-once system) to both arms; for the agent this is an assumption.
+- Two primary comparisons were made without correcting for multiple comparisons.
+
+Deviations from the written plan, none of which changes a reported number:
+1. The paid answering steps ran in the cloud while the free reranking was still finishing on the
+   local machine; no answering step uses the reranker.
+2. The agent's faithfulness check crashed on one answer (query 107), which was submitted without
+   reading any page ("I have not yet searched the technical orders…") and was judged FAIL. A guard
+   added after the crash records it as a verifier failure, which the plan says is reported as
+   skipped. It contains no claim about the manuals.
+3. The two faithfulness checks were restarted to run in parallel; completed checks were cached,
+   and a few calls in progress were lost and redone.
+
+Total cost of the held-out test: about $12.60 estimated from logged tokens.
+
+
+## Phases 1–2: retrieval and grounded answers (dev split)
 
 **Reference baseline (untuned, full English set).**
 
@@ -47,8 +115,8 @@ Reranking the top 20 adds +0.027 nDCG@10 over the hybrid (95% CI −0.006 to +0.
 [`rerank_dev_top20.json`](evals/results/rerank_dev_top20.json)): likely but not yet demonstrated on
 113 queries. Depth is a cost decision: on this 4-core CPU the reranker takes ~0.29 s per chunk pair,
 so top 20 costs ~14 s per query and top 50 (recall 0.678 vs 0.566) ~33 s; the deeper setting is
-deferred to a GPU run. The 170-query sealed split has not been scored yet; the final test is
-pre-registered in [`docs/sealed_test_design.md`](docs/sealed_test_design.md).
+deferred to a GPU run. On the held-out questions the reranking gain is clear (see the final
+result above).
 
 **Grounded answers (113 dev queries).** `claude-haiku-5-5` answers from the top-k pages with page
 citations; structured output restricts citations to the page ids it was given. `claude-sonnet-5-5`
@@ -288,6 +356,16 @@ python3 scripts/compare_agent.py --agent-version a1.1 --repeats 3
 python3 scripts/run_faithfulness.py evals/results/agent_dev_a1.1_r0.json
 python3 scripts/compare_faithfulness.py --agent-version a1.1
 python3 scripts/run_agent.py --self-check --repeats 1    # agent v2
+# final held-out test, as pre-registered in docs/sealed_test_design.md (run once)
+python3 scripts/run_dense_hybrid.py --split sealed
+python3 scripts/run_rerank.py --split sealed --top-n 20
+python3 scripts/run_answers.py --split sealed --context hybrid --k 10
+python3 scripts/run_agent.py --split sealed
+python3 scripts/compare_agent.py --split sealed --agent-version a1.1 --repeats 1
+python3 scripts/run_faithfulness.py evals/results/answers_sealed_hybrid_k10_v3.json
+python3 scripts/run_faithfulness.py evals/results/agent_sealed_a1.1_r0.json
+python3 scripts/compare_faithfulness.py --split sealed --agent-version a1.1
+python3 scripts/summarise_sealed.py      # applies the decision rules; no API calls
 ```
 
 ## Layout

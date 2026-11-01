@@ -1,0 +1,247 @@
+{
+ "design": "docs/sealed_test_design.md",
+ "n_queries": 170,
+ "retrieval": {
+  "ndcg@10_sealed": {
+   "bm25": {
+    "mean": 0.4517,
+    "ci95": [
+     0.3943,
+     0.5108
+    ]
+   },
+   "dense_chunk": {
+    "mean": 0.3739,
+    "ci95": [
+     0.3201,
+     0.4269
+    ]
+   },
+   "hybrid": {
+    "mean": 0.4474,
+    "ci95": [
+     0.3916,
+     0.5025
+    ]
+   },
+   "hybrid+rerank": {
+    "mean": 0.5273,
+    "ci95": [
+     0.4688,
+     0.587
+    ]
+   }
+  },
+  "hybrid_vs_bm25": {
+   "dev": {
+    "diff": -0.0037,
+    "ci95": [
+     -0.0362,
+     0.0276
+    ]
+   },
+   "sealed": {
+    "diff": -0.0043,
+    "ci95": [
+     -0.0389,
+     0.0279
+    ]
+   },
+   "confirmed": true
+  },
+  "dense_chunk_vs_bm25": {
+   "dev": {
+    "diff": -0.0836,
+    "ci95": [
+     -0.1326,
+     -0.0359
+    ]
+   },
+   "sealed": {
+    "diff": -0.0778,
+    "ci95": [
+     -0.1263,
+     -0.0324
+    ]
+   },
+   "confirmed": true
+  },
+  "rerank_vs_hybrid": {
+   "dev": {
+    "diff": 0.0274,
+    "ci95": [
+     -0.0062,
+     0.0602
+    ]
+   },
+   "sealed": {
+    "diff": 0.0799,
+    "ci95": [
+     0.0487,
+     0.1138
+    ]
+   },
+   "confirmed": false
+  }
+ },
+ "correctness": {
+  "pass_rate": {
+   "baseline": 0.547,
+   "agent": 0.624
+  },
+  "paired_diff": {
+   "mean": 0.0765,
+   "ci95": [
+    0.0176,
+    0.1412
+   ]
+  },
+  "dev_paired_diff": {
+   "mean": 0.115,
+   "ci95": [
+    0.0354,
+    0.1947
+   ]
+  },
+  "cost_ratio": 2.13,
+  "replicates": true,
+  "human_standard_estimate": {
+   "baseline": {
+    "estimate": 0.66,
+    "range95": [
+     0.51,
+     0.759
+    ],
+    "method": "stratified by judge verdict; Wilson bounds on both flip rates"
+   },
+   "agent": {
+    "estimate": 0.718,
+    "range95": [
+     0.566,
+     0.8
+    ],
+    "method": "stratified by judge verdict; Wilson bounds on both flip rates"
+   }
+  },
+  "groups": {
+   "retrieval_missed_in_baseline": {
+    "n": 40,
+    "baseline": 0.1,
+    "agent_r0": 0.325
+   },
+   "summary_questions": {
+    "n": 104,
+    "baseline": 0.433,
+    "agent_r0": 0.538
+   }
+  },
+  "flips": {
+   "fail_to_pass": 22,
+   "pass_to_fail": 9
+  }
+ },
+ "faithfulness": {
+  "paired_questions": 166,
+  "supported_share_per_answer": {
+   "agent": 0.8961,
+   "baseline": 0.9255,
+   "agent_minus_baseline": -0.0293,
+   "ci95": [
+    -0.0568,
+    -0.0022
+   ]
+  },
+  "dev_supported_share_per_answer": {
+   "agent": 0.8891,
+   "baseline": 0.9334,
+   "agent_minus_baseline": -0.0443,
+   "ci95": [
+    -0.0767,
+    -0.0096
+   ]
+  },
+  "unsupported_claims_per_answer": {
+   "agent": 0.41,
+   "baseline": 0.042,
+   "agent_minus_baseline": 0.3675,
+   "ci95": [
+    0.2349,
+    0.5181
+   ]
+  },
+  "answers_with_no_unsupported_claim": {
+   "agent": 0.747,
+   "baseline": 0.9578,
+   "agent_minus_baseline": -0.2108,
+   "ci95": [
+    -0.2831,
+    -0.1386
+   ]
+  },
+  "claim_level": {
+   "agent": {
+    "fact_claims": 2079,
+    "unsupported": {
+     "count": 69,
+     "rate": 0.0332,
+     "wilson95": [
+      0.0263,
+      0.0418
+     ]
+    },
+    "partially_supported": {
+     "count": 131,
+     "rate": 0.063,
+     "wilson95": [
+      0.0534,
+      0.0743
+     ]
+    }
+   },
+   "baseline": {
+    "fact_claims": 1241,
+    "unsupported": {
+     "count": 7,
+     "rate": 0.0056,
+     "wilson95": [
+      0.0027,
+      0.0116
+     ]
+    },
+    "partially_supported": {
+     "count": 76,
+     "rate": 0.0612,
+     "wilson95": [
+      0.0492,
+      0.076
+     ]
+    }
+   }
+  },
+  "agent_less_faithful_replicates": true
+ },
+ "estimated_cost_usd": {
+  "total": 12.58,
+  "by_step": {
+   "baseline_answers_and_judge": {
+    "answer": 0.225,
+    "judge": 0.8403,
+    "price_source": "third-party trackers (Oct 2026); token-based estimate matched billed spend within 1.3% on 1 Nov 2026 ($21.02 estimated vs $21.29 billed)"
+   },
+   "agent_answers_and_judge": {
+    "answer": 0.4794,
+    "judge": 0.9408,
+    "price_source": "third-party trackers (Oct 2026); token-based estimate matched billed spend within 1.3% on 1 Nov 2026 ($21.02 estimated vs $21.29 billed)"
+   },
+   "faithfulness_baseline": {
+    "verifier": 5.7115,
+    "price_source": "third-party trackers (Oct 2026); token-based estimate matched billed spend within 1.3% on 1 Nov 2026 ($21.02 estimated vs $21.29 billed)"
+   },
+   "faithfulness_agent": {
+    "verifier": 4.3876,
+    "price_source": "third-party trackers (Oct 2026); token-based estimate matched billed spend within 1.3% on 1 Nov 2026 ($21.02 estimated vs $21.29 billed)"
+   }
+  }
+ },
+ "multiple_comparisons": "two primary comparisons, no correction applied"
+}

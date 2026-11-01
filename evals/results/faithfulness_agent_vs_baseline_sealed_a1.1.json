@@ -1,0 +1,78 @@
+{
+ "split": "sealed",
+ "agent_version": "a1.1",
+ "verifier": "claude-sonnet-5-5",
+ "paired_questions": 166,
+ "supported_share_per_answer": {
+  "agent": 0.8961,
+  "baseline": 0.9255,
+  "agent_minus_baseline": -0.0293,
+  "ci95": [
+   -0.0568,
+   -0.0022
+  ]
+ },
+ "answers_with_no_unsupported_claim": {
+  "agent": 0.747,
+  "baseline": 0.9578,
+  "agent_minus_baseline": -0.2108,
+  "ci95": [
+   -0.2831,
+   -0.1386
+  ]
+ },
+ "unsupported_claims_per_answer": {
+  "agent": 0.41,
+  "baseline": 0.042,
+  "agent_minus_baseline": 0.3675,
+  "ci95": [
+   0.2349,
+   0.5181
+  ]
+ },
+ "fact_claims_per_answer": {
+  "agent": 12.23,
+  "baseline": 7.46
+ },
+ "claim_level_all_checked_answers": {
+  "agent": {
+   "fact_claims": 2079,
+   "unsupported": {
+    "count": 69,
+    "rate": 0.0332,
+    "wilson95": [
+     0.0263,
+     0.0418
+    ]
+   },
+   "partially_supported": {
+    "count": 131,
+    "rate": 0.063,
+    "wilson95": [
+     0.0534,
+     0.0743
+    ]
+   }
+  },
+  "baseline": {
+   "fact_claims": 1241,
+   "unsupported": {
+    "count": 7,
+    "rate": 0.0056,
+    "wilson95": [
+     0.0027,
+     0.0116
+    ]
+   },
+   "partially_supported": {
+    "count": 76,
+    "rate": 0.0612,
+    "wilson95": [
+     0.0492,
+     0.076
+    ]
+   }
+  }
+ },
+ "caveat": "Verifier misses some unsupported claims (human spot check: 1 of 11 'supported' claims was unsupported), so absolute rates are underestimates; the paired difference uses the same verifier for both arms."
+}

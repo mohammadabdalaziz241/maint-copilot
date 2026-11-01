@@ -56,6 +56,8 @@ def main() -> None:
             out = {"skipped": "no answer"}
         elif rec["insufficient_evidence"]:
             out = {"skipped": "declined"}
+        elif not rec["context_page_ids"]:  # nothing to check against (added after sealed run)
+            out = {"skipped": "verifier failed", "error": "answer submitted without reading a page"}
         else:
             ctx = [
                 {"corpus_id": i, **pages.loc[i, ["doc_id", "page_number_in_doc", "markdown"]]}
