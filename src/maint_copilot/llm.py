@@ -15,10 +15,13 @@ import anthropic
 # USD per million tokens: (input, output). Verify against https://www.anthropic.com/pricing
 # before quoting any cost; the values below are recorded with their source.
 PRICES_USD_PER_MTOK: dict[str, tuple[float, float]] = {
-    "claude-haiku-5-5": (0.10, 0.50),  # third-party tracker, 19 Oct 2026 - UNVERIFIED
-    "claude-sonnet-5-5": (2.00, 10.00),  # third-party tracker, 19 Oct 2026 - UNVERIFIED
+    "claude-haiku-5-5": (0.10, 0.50),  # third-party tracker, 19 Oct 2026; consistent with billing
+    "claude-sonnet-5-5": (2.00, 10.00),  # third-party tracker, 19 Oct 2026; consistent with billing
 }
-PRICE_SOURCE = "third-party trackers (Oct 2026); not yet checked against the official pricing page"
+PRICE_SOURCE = (
+    "third-party trackers (Oct 2026); token-based estimate matched billed spend within 1.3% "
+    "on 1 Nov 2026 ($21.02 estimated vs $21.29 billed)"
+)
 
 
 def load_api_key(env_file: Path = Path(".env")) -> str:

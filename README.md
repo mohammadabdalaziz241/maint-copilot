@@ -121,8 +121,9 @@ checked against the page text in code.
   measures.
 
 Dev cost per 113-question run: about $0.07 for answers and $0.56 for judging, from token counts
-and third-party price lists not yet checked against Anthropic's pricing page
-([`llm.py`](src/maint_copilot/llm.py)). Answer latency p50 2.0–2.6 s, p95 3.9–4.4 s.
+and third-party price lists ([`llm.py`](src/maint_copilot/llm.py)). Check against billing: the
+Anthropic console showed $21.29 spent by 1 Nov 2026, against $21.02 estimated from the logged
+tokens (1.3% lower; uncached smoke tests and failed calls are not in the logs). Answer latency p50 2.0–2.6 s, p95 3.9–4.4 s.
 
 ## Phase 3: agent (dev split)
 
@@ -139,7 +140,7 @@ same answer rules.
 | Judge pass rate (113 dev questions) | 0.478 | **0.593** (repeats: 0.628, 0.655) | [`agent_vs_baseline_dev.json`](evals/results/agent_vs_baseline_dev.json) |
 | Paired difference, first run | | **+0.115** (95% CI +0.035 to +0.195); 18 FAIL→PASS, 5 PASS→FAIL | |
 | Passes in all 3 agent runs (pass^3) | | 0.549 | |
-| Answer cost per question | $0.0014 | $0.0029 (2.1×) | price table unverified |
+| Answer cost per question | $0.0014 | $0.0029 (2.1×) | estimated from tokens |
 | Median latency | 2.5 s | 6.5 s | |
 | Tool calls per question | | 3.9 mean; 1–2 of 113 runs hit the budget | |
 
@@ -154,12 +155,23 @@ analysis shows about *why*:
 - **Answer length is not the explanation**: agent answers are longer (213 vs 127 words), but in
   both arms the shortest answers pass most often, and on the 22 questions where both answers have
   similar length the agent still passes more (0.727 vs 0.591).
-- **Faithfulness is worse, provisionally.** With the same verifier, the agent's answers have
-  0.881 of claims supported per answer (95% CI 0.851–0.909) and 80% of answers with no unsupported
-  claim, against 0.933 and 92% for the reranked pipeline; 34 of 1,306 agent claims were judged
-  unsupported vs 9 of 959. The pre-registered comparison is against the hybrid baseline, whose
-  faithfulness check is incomplete (45 of 113 answers); **the Phase 3 result is provisional until
-  it is finished.**
+- **Faithfulness is worse** ([`faithfulness_agent_vs_baseline_dev.json`](evals/results/faithfulness_agent_vs_baseline_dev.json)).
+  Same verifier, paired on the 110 dev questions where both answers contain factual claims:
+
+  | | Agent | Baseline | Paired difference (95% CI) |
+  |---|---|---|---|
+  | Claims supported per answer | 0.889 | 0.933 | −0.044 (−0.077 to −0.010) |
+  | Answers with no unsupported claim | 0.809 | 0.909 | −0.100 (−0.182 to −0.018) |
+  | Unsupported claims per answer | 0.282 | 0.118 | +0.164 (+0.036 to +0.300) |
+  | Unsupported claim rate (all checked answers) | 2.6% (34/1,306) | 1.4% (13/948) | |
+
+  The agent's answers carry about 40% more claims (11.9 vs 8.6 per answer) and a larger share of
+  them are unsupported. Absolute rates are underestimates (the verifier misses some unsupported
+  claims; see the spot check), but both arms are measured by the same verifier.
+
+**Verdict for agent v1 (a1.1):** more often correct (+0.115 pass rate) but measurably less
+faithful. For maintenance instructions an unsupported claim is the costlier error, so v1 is not
+the final design; the next version targets this trade-off explicitly.
 
 A human-approval path for work orders is included: the agent can only propose a draft, a named
 person must approve it, decisions are final, and drafts may only cite pages the agent read
