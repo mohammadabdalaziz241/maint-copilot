@@ -1,10 +1,12 @@
 """Paired faithfulness comparison: agent vs hybrid baseline, same verifier, same dev questions.
 
-Writes evals/results/faithfulness_agent_vs_baseline_dev.json.
+Writes evals/results/faithfulness_agent_vs_baseline_dev_<agent version>.json. Usage:
+    python scripts/compare_faithfulness.py --agent-version a2
 """
 
 from __future__ import annotations
 
+import argparse
 import importlib.util
 import json
 from pathlib import Path
@@ -17,7 +19,6 @@ _spec = importlib.util.spec_from_file_location("ja", Path(__file__).with_name("j
 _ja = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_ja)
 
-AGENT = Path("evals/results/faithfulness_agent_dev_a1.1_r0.json")
 BASE = Path("evals/results/faithfulness_dev_hybrid_k10_v3.json")
 
 
@@ -43,11 +44,16 @@ def paired(a: dict, b: dict, ids: list[int], key: str) -> dict:
 
 
 def main() -> None:
-    ag, bs = json.loads(AGENT.read_text()), json.loads(BASE.read_text())
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--agent-version", required=True)
+    args = ap.parse_args()
+    agent_file = Path(f"evals/results/faithfulness_agent_dev_{args.agent_version}_r0.json")
+    ag, bs = json.loads(agent_file.read_text()), json.loads(BASE.read_text())
     a = {c["query_id"]: c for c in ag["checks"] if "claims" in c and c["n_fact_claims"]}
     b = {c["query_id"]: c for c in bs["checks"] if "claims" in c and c["n_fact_claims"]}
     ids = sorted(set(a) & set(b))
     result = {
+        "agent_version": args.agent_version,
         "verifier": ag["summary"]["verifier_model"],
         "paired_questions": len(ids),
         "supported_share_per_answer": {
@@ -77,9 +83,8 @@ def main() -> None:
         "claims was unsupported), so absolute rates are underestimates; the paired difference uses "
         "the same verifier for both arms.",
     }
-    Path("evals/results/faithfulness_agent_vs_baseline_dev.json").write_text(
-        json.dumps(result, indent=1)
-    )
+    out = Path(f"evals/results/faithfulness_agent_vs_baseline_dev_{args.agent_version}.json")
+    out.write_text(json.dumps(result, indent=1))
     print(json.dumps(result, indent=1))
 
 

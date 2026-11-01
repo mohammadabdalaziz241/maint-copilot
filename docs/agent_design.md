@@ -85,3 +85,10 @@ baseline as v1.
 
 If a2 fails any rule, v1 is kept and reported with its trade-off. Repeats (pass^3) are run only
 if a2 passes.
+
+### Outcome (1 Nov 2026)
+
+a2 met rule 1 (faithfulness; supported share per answer +0.017 vs baseline, 95% CI −0.009 to
++0.048; unsupported claims per answer −0.091, CI −0.173 to −0.018) but failed rule 2 (pass rate
++0.071 vs baseline, CI −0.009 to +0.159) and rule 3 (cost 3.11× baseline). As pre-registered, v1
+is kept as the reported agent and no repeats of a2 were run.

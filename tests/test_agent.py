@@ -171,3 +171,92 @@ def test_reading_more_than_five_pages_says_so():
     run_agent(client, "m", "q", lib())
     result = client.requests[1]["messages"][-1]["content"][0]["content"]
     assert "Only the first 5 of 6" in result
+
+
+class FakeParseClient(FakeClient):
+    """Adds messages.parse: returns scripted parsed outputs for the self-check call."""
+
+    def __init__(self, script, parsed):
+        super().__init__(script)
+        self.parsed = list(parsed)
+
+    def parse(self, **kw):
+        out = self.parsed.pop(0)
+        usage = SimpleNamespace(
+            input_tokens=50,
+            output_tokens=10,
+            cache_read_input_tokens=0,
+            cache_creation_input_tokens=0,
+        )
+        if isinstance(out, Exception):
+            raise out
+        return SimpleNamespace(parsed_output=out, usage=usage, stop_reason="end_turn")
+
+
+def checked(revised, citations, claims):
+    return SimpleNamespace(
+        revised_answer=revised,
+        citations=citations,
+        claims=[SimpleNamespace(claim=c, supported=s, page_id=p, quote=q) for c, s, p, q in claims],
+    )
+
+
+def test_self_check_replaces_draft_and_keeps_it_in_the_record():
+    client = FakeParseClient(
+        [
+            [tool("read_pages", page_ids=["P2"])],
+            [
+                tool(
+                    "submit_answer",
+                    answer="35 in-lb; also 50 in-lb",
+                    citations=["P2"],
+                    insufficient_evidence=False,
+                )
+            ],
+        ],
+        [
+            checked(
+                "35 in-lb",
+                ["P2", "P4"],
+                [
+                    ("Torque is 35 in-lb", True, "P2", "Torque flange bolts to 35 in-lb"),
+                    ("Also 50 in-lb", False, None, ""),
+                ],
+            )
+        ],
+    )
+    out = run_agent(client, "m", "What torque?", lib(), self_check=True)
+    assert out["answer"] == "35 in-lb" and out["draft_answer"] == "35 in-lb; also 50 in-lb"
+    assert out["citations"] == [2]  # P4 was never read, so it cannot be cited
+    sc = out["self_check"]
+    assert sc["applied"] and sc["claims_removed"] == 1 and sc["quote_verified_share"] == 1.0
+    assert out["trace"][-1]["tool"] == "self_check"
+    assert out["usage"]["input_tokens"] == 250  # two agent turns + self-check
+
+
+def test_self_check_skipped_when_agent_declines():
+    client = FakeParseClient(
+        [[tool("submit_answer", answer="Not found", citations=[], insufficient_evidence=True)]],
+        [],
+    )
+    out = run_agent(client, "m", "q", lib(), self_check=True)
+    assert out["self_check"] is None and out["answer"] == "Not found"
+
+
+def test_failed_self_check_keeps_the_draft():
+    client = FakeParseClient(
+        [
+            [tool("read_pages", page_ids=["P2"])],
+            [
+                tool(
+                    "submit_answer",
+                    answer="35 in-lb",
+                    citations=["P2"],
+                    insufficient_evidence=False,
+                )
+            ],
+        ],
+        [None, None],
+    )
+    out = run_agent(client, "m", "q", lib(), self_check=True)
+    assert out["answer"] == "35 in-lb" and not out["self_check"]["applied"]

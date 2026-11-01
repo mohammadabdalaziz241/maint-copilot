@@ -17,8 +17,10 @@ import pandas as pd
 
 from maint_copilot.answer import ANSWER_SYSTEM, MAX_PAGE_CHARS
 from maint_copilot.llm import Usage
+from maint_copilot.selfcheck import self_check as run_self_check
 
 AGENT_VERSION = "a1.1"  # a1.1: empty/truncated submissions are returned as errors
+AGENT_VERSION_SELFCHECK = "a2"  # a2 = a1.1 + self-check after submission
 
 AGENT_SYSTEM = """You are a research assistant for U.S. Air Force maintenance technicians. \
 You find the answer in a library of 27 technical orders using tools, then submit it.
@@ -193,6 +195,7 @@ def run_agent(
     lib: Library,
     budget: Budget | None = None,
     price: Callable[[Usage], float | None] | None = None,
+    self_check: bool = False,
 ) -> dict:
     budget = budget or Budget()
     st = AgentState()
@@ -306,6 +309,34 @@ def run_agent(
             "dropped_citations": [],
             "insufficient_evidence": False,
         }
+
+    check = None
+    if self_check and final["answer"].strip() and not final["insufficient_evidence"] and st.read:
+        t0 = time.perf_counter()
+        pages = [
+            {"corpus_id": p, **lib.pages.loc[p, ["doc_id", "page_number_in_doc", "markdown"]]}
+            for p in sorted(st.read)
+        ]
+        check = run_self_check(client, model, question, final["answer"], pages)
+        for k in st.usage.__dict__:
+            setattr(st.usage, k, getattr(st.usage, k) + check["usage"].get(k, 0))
+        st.trace.append(
+            {
+                "step": len(st.trace) + 1,
+                "tool": "self_check",
+                "result": "applied" if check["applied"] else f"failed: {check['error']}",
+                "claims_removed": check.get("claims_removed"),
+                "latency_s": round(time.perf_counter() - t0, 3),
+            }
+        )
+        if check["applied"]:
+            final = {
+                **final,
+                "draft_answer": final["answer"],
+                "draft_citations": final["citations"],
+                "answer": check["revised_answer"],
+                "citations": [c for c in check["citations"] if c in st.read],
+            }
     return {
         **final,
         "error": None if final["answer"] else "agent produced no answer",
@@ -313,7 +344,10 @@ def run_agent(
         "pages_seen_in_search": sorted(st.seen_in_search),
         "tool_calls": st.tool_calls,
         "stop_cause": stop_cause,
-        "agent_version": AGENT_VERSION,
+        "agent_version": AGENT_VERSION_SELFCHECK if self_check else AGENT_VERSION,
+        "self_check": (
+            {k: v for k, v in check.items() if k != "usage"} if check is not None else None
+        ),
         "model": model,
         "usage": st.usage.__dict__,
         "latency_s": round(time.perf_counter() - t_start, 3),

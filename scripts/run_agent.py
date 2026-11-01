@@ -16,7 +16,13 @@ from pathlib import Path
 import numpy as np
 from sentence_transformers import SentenceTransformer
 
-from maint_copilot.agent import AGENT_VERSION, Budget, Library, run_agent
+from maint_copilot.agent import (
+    AGENT_VERSION,
+    AGENT_VERSION_SELFCHECK,
+    Budget,
+    Library,
+    run_agent,
+)
 from maint_copilot.answer import citation_scores
 from maint_copilot.data import load_benchmark
 from maint_copilot.judge import judge_answer
@@ -32,6 +38,7 @@ def main() -> None:
     ap.add_argument("--repeats", type=int, default=1)
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--max-tool-calls", type=int, default=8)
+    ap.add_argument("--self-check", action="store_true", help="agent v2: self-check step")
     args = ap.parse_args()
 
     bench = load_benchmark()
@@ -51,7 +58,8 @@ def main() -> None:
     lib = Library(bench.corpus, search)
     llm = client()
     budget = Budget(max_tool_calls=args.max_tool_calls)
-    config = f"{AGENT_VERSION}_{args.model}_tc{args.max_tool_calls}"
+    version = AGENT_VERSION_SELFCHECK if args.self_check else AGENT_VERSION
+    config = f"{version}_{args.model}_tc{args.max_tool_calls}"
 
     for rep in range(args.repeats):
         cache = Path("data/cache/agent") / config / f"r{rep}"
@@ -63,7 +71,13 @@ def main() -> None:
                 return json.loads(path.read_text())
             row = queries.loc[qid]
             out = run_agent(
-                llm, args.model, row["query"], lib, budget, price=lambda u: u.cost_usd(args.model)
+                llm,
+                args.model,
+                row["query"],
+                lib,
+                budget,
+                price=lambda u: u.cost_usd(args.model),
+                self_check=args.self_check,
             )
             if out["error"]:
                 verdict = {
@@ -103,7 +117,7 @@ def main() -> None:
             "split": "dev",
             "config": config,
             "repeat": rep,
-            "agent_version": AGENT_VERSION,
+            "agent_version": version,
             "answer_model": args.model,
             "judge_model": args.judge,
             "budget": budget.__dict__,
@@ -120,7 +134,7 @@ def main() -> None:
                 ),
             },
         }
-        out = Path(f"evals/results/agent_dev_{AGENT_VERSION}_r{rep}.json")
+        out = Path(f"evals/results/agent_dev_{version}_r{rep}.json")
         out.write_text(json.dumps({"summary": summary, "records": records}, indent=1))
         s = summary
         print(

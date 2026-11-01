@@ -1,7 +1,7 @@
 """Apply the pre-registered Phase 3 comparison: agent vs non-agentic baseline on dev.
 
 Baseline: evals/results/answers_dev_hybrid_k10_v3.json (same retriever, same answer rules).
-Writes evals/results/agent_vs_baseline_dev.json.
+Writes evals/results/agent_vs_baseline_dev_<agent version>.json.
 """
 
 from __future__ import annotations
@@ -90,7 +90,8 @@ def main() -> None:
     result["success_rule_met"] = bool(
         lo > 0 and result["answer_cost_usd_per_question"]["ratio"] <= 3
     )
-    Path("evals/results/agent_vs_baseline_dev.json").write_text(json.dumps(result, indent=1))
+    out = Path(f"evals/results/agent_vs_baseline_dev_{args.agent_version}.json")
+    out.write_text(json.dumps(result, indent=1))
     print(json.dumps(result, indent=1))
 
 

@@ -137,7 +137,7 @@ same answer rules.
 
 | | Baseline | Agent | Source |
 |---|---|---|---|
-| Judge pass rate (113 dev questions) | 0.478 | **0.593** (repeats: 0.628, 0.655) | [`agent_vs_baseline_dev.json`](evals/results/agent_vs_baseline_dev.json) |
+| Judge pass rate (113 dev questions) | 0.478 | **0.593** (repeats: 0.628, 0.655) | [`agent_vs_baseline_dev_a1.1.json`](evals/results/agent_vs_baseline_dev_a1.1.json) |
 | Paired difference, first run | | **+0.115** (95% CI +0.035 to +0.195); 18 FAIL→PASS, 5 PASS→FAIL | |
 | Passes in all 3 agent runs (pass^3) | | 0.549 | |
 | Answer cost per question | $0.0014 | $0.0029 (2.1×) | estimated from tokens |
@@ -155,7 +155,7 @@ analysis shows about *why*:
 - **Answer length is not the explanation**: agent answers are longer (213 vs 127 words), but in
   both arms the shortest answers pass most often, and on the 22 questions where both answers have
   similar length the agent still passes more (0.727 vs 0.591).
-- **Faithfulness is worse** ([`faithfulness_agent_vs_baseline_dev.json`](evals/results/faithfulness_agent_vs_baseline_dev.json)).
+- **Faithfulness is worse** ([`faithfulness_agent_vs_baseline_dev_a1.1.json`](evals/results/faithfulness_agent_vs_baseline_dev_a1.1.json)).
   Same verifier, paired on the 110 dev questions where both answers contain factual claims:
 
   | | Agent | Baseline | Paired difference (95% CI) |
@@ -169,9 +169,37 @@ analysis shows about *why*:
   them are unsupported. Absolute rates are underestimates (the verifier misses some unsupported
   claims; see the spot check), but both arms are measured by the same verifier.
 
-**Verdict for agent v1 (a1.1):** more often correct (+0.115 pass rate) but measurably less
-faithful. For maintenance instructions an unsupported claim is the costlier error, so v1 is not
-the final design; the next version targets this trade-off explicitly.
+**Agent v2 (a2): a self-check before answering.** After the agent submits, a separate Haiku
+call checks each claim of the draft against the pages read (with quotes verified in code) and
+rewrites the answer without unsupported content. The design and its success rule were committed
+before the run ([`docs/agent_design.md`](docs/agent_design.md)): faithfulness no worse than the
+baseline, correctness still above it (CI excluding zero), and cost at most 3×.
+
+| Dev, 113 questions, one run | Baseline | Agent v1 | Agent v2 |
+|---|---|---|---|
+| Judge pass rate | 0.478 | 0.593 | 0.549 |
+| Paired vs baseline (95% CI) | | +0.115 (+0.035 to +0.195) | +0.071 (−0.009 to +0.159) |
+| Claims supported per answer | 0.933 | 0.889 | **0.951** |
+| Answers with no unsupported claim | 0.909 | 0.809 | **0.973** |
+| Unsupported claims per answer (paired diff vs baseline) | 0.118 | 0.282 (+0.164) | **0.027 (−0.091; −0.173 to −0.018)** |
+| Unsupported claim rate | 1.4% (13/948) | 2.6% (34/1,306) | **0.2% (3/1,350)** |
+| Answer cost per question (× baseline) | $0.0014 | $0.0029 (2.1×) | $0.0044 (3.1×) |
+| Median latency | 2.5 s | 6.5 s | 11.4 s |
+
+Sources: [`agent_vs_baseline_dev_a2.json`](evals/results/agent_vs_baseline_dev_a2.json),
+[`faithfulness_agent_vs_baseline_dev_a2.json`](evals/results/faithfulness_agent_vs_baseline_dev_a2.json).
+The self-check removed 121 claims across 78 of 111 answers; 90% of its evidence quotes were found
+on the named page.
+
+**Verdict, as pre-registered: v2 fails** two of the three conditions, both narrowly: its
+correctness gain over the baseline is no longer significant (CI −0.009 to +0.159) and its cost is
+3.1×, just over the 3× limit. It does fix faithfulness: unsupported claims per answer fall below
+the baseline's, with a CI excluding zero. **v1 therefore remains the reported agent, with its
+trade-off stated**: more often correct, less faithful. The two versions mark the two ends of a
+precision/recall trade-off; for a deployment where an unsupported maintenance instruction is
+unacceptable, v2's profile is the safer one (a judgement, not part of the pre-registered test).
+v1's three runs ranged 0.593–0.655, so a single run of either version carries run-to-run noise
+of a similar size to the v1–v2 gap.
 
 A human-approval path for work orders is included: the agent can only propose a draft, a named
 person must approve it, decisions are final, and drafts may only cite pages the agent read
@@ -223,6 +251,9 @@ python3 scripts/run_answers.py --context oracle --k 10
 python3 scripts/run_answers.py --context hybrid --k 10    # Phase 3 baseline
 python3 scripts/run_agent.py --repeats 3
 python3 scripts/compare_agent.py --agent-version a1.1 --repeats 3
+python3 scripts/run_faithfulness.py evals/results/agent_dev_a1.1_r0.json
+python3 scripts/compare_faithfulness.py --agent-version a1.1
+python3 scripts/run_agent.py --self-check --repeats 1    # agent v2
 ```
 
 ## Layout
